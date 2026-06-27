@@ -78,7 +78,7 @@ NOTE   P1-D : Phase-1 dashboard is a self-contained Next.js app rooted at
 - [x] P1-D.1 explore day-one dashboard content
 - [!] P1-D.2 agree local read contract with P1-A (proposal drafted; awaiting P1-A — see NEEDS)
 - [x] P1-D.3 Next.js dashboard reading local route
-- [ ] P1-D.4 daily timeline ribbon
+- [x] P1-D.4 daily timeline ribbon
 - [ ] P1-D.5 category breakdown + top projects
 - [ ] P1-D.6 focus score
 - [ ] P1-D.7 empty/offline states
@@ -100,6 +100,8 @@ NOTE   P1-D : Phase-1 dashboard is a self-contained Next.js app rooted at
 2026-06-27  P1-D.2  block  read contract proposed; awaiting P1-A to freeze (NEEDS filed); blocks P1-D.3+
 2026-06-27  P1-D.3  doing  scaffold self-contained Next.js app under web/dashboard
 2026-06-27  P1-D.3  done   Next.js app + TS Event Contract mirror + agent client (http/mock) + /api/timeline proxy (RFC7807) + summary engine; reads via mock, lint+build green, smoke-tested; commit 7ac6b4a
+2026-06-27  P1-D.4  doing  timeline ribbon layout + component
+2026-06-27  P1-D.4  done   cropped hourly ribbon, category-colored blocks, native tooltips, hour ticks; shared color palette; lint+build green, smoke-verified 14 blocks/8 colors; commit 7897fbb
 ```
 
 ---

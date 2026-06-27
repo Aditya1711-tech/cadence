@@ -1,6 +1,8 @@
 import { loadDay } from "@/lib/dashboard-data";
-import { Card } from "@/components/ui/card";
+import { Card, CardTitle } from "@/components/ui/card";
+import { Ribbon } from "@/components/ribbon";
 import { formatDuration } from "@/lib/time";
+import type { Event } from "@/lib/contract/event";
 
 // Server component: reads today's local activity and renders the glanceable
 // view. Ribbon (P1-D.4), category donut + projects (P1-D.5), and focus score
@@ -42,6 +44,7 @@ export default async function TodayPage() {
         />
       ) : (
         <DayView
+          events={day.events}
           focusedMs={day.summary.focus.deepWorkMs}
           activeMs={day.summary.activeMs}
           idleMs={day.summary.idleMs}
@@ -54,12 +57,14 @@ export default async function TodayPage() {
 }
 
 function DayView({
+  events,
   focusedMs,
   activeMs,
   idleMs,
   totalMs,
   eventCount,
 }: {
+  events: Event[];
   focusedMs: number;
   activeMs: number;
   idleMs: number;
@@ -78,6 +83,11 @@ function DayView({
         <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">
           {formatDuration(activeMs)} active · {formatDuration(idleMs)} idle
         </p>
+      </Card>
+
+      <Card>
+        <CardTitle>Timeline</CardTitle>
+        <Ribbon events={events} />
       </Card>
 
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">

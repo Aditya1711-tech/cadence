@@ -34,6 +34,14 @@ NOTE   P1-D : Phase-1 dashboard is a self-contained Next.js app rooted at
        /web shell refactor for /web/admin (P2-E) + /web/insights (P3) is
        deferred to the P2 web spine. Actual check cmd: cd web/dashboard &&
        npm ci && npm run lint && npm run build.
+
+NOTE   P1-D : env var correction — the phase-doc P1-D var
+       NEXT_PUBLIC_CADENCE_AGENT_BASE is build-time-inlined by Next, so it
+       can't be set per machine. The dashboard reads the daemon SERVER-SIDE
+       (proxy), so it uses the RUNTIME var CADENCE_AGENT_BASE (default
+       http://127.0.0.1:47821) + CADENCE_USE_MOCK. See web/dashboard/.env.example.
+       Spine: please update the P1-D "Variables to set" block in
+       docs/PHASE-1-foundation.md accordingly.
 ```
 
 ---
@@ -78,7 +86,7 @@ NOTE   P1-D : Phase-1 dashboard is a self-contained Next.js app rooted at
 - [x] P1-D.4 daily timeline ribbon
 - [x] P1-D.5 category breakdown + top projects
 - [x] P1-D.6 focus score
-- [ ] P1-D.7 empty/offline states
+- [x] P1-D.7 empty/offline states
 - [ ] P1-D.8 verify with real local data
 
 **Build Log — Phase 1**
@@ -104,6 +112,8 @@ NOTE   P1-D : Phase-1 dashboard is a self-contained Next.js app rooted at
 2026-06-27  P1-D.2  done   read contract frozen by P1-A.5; reconciled HttpAgentClient to bare array (no envelope/pagination), proxy returns array, mock matches ts_start-in-range; NEEDS resolved; resolution table in REQUIREMENTS-P1-D.md; lint+build green; commit 7e2a349
 2026-06-27  P1-D.6  doing  focus score card
 2026-06-27  P1-D.6  done   FocusCard: 0-100 score + band (Focused/Mixed/Fragmented) + plain-language read (deep blocks/longest/switches); lint+build green, smoke-verified; commit 7275b56
+2026-06-27  P1-D.7  doing  friendly offline/empty/error/loading states + live polling
+2026-06-27  P1-D.7  done   StatePanel (offline w/ start cmd+retry, empty, error, loading skeleton) + LiveDay client polls /api/timeline every 60s; fixed env: runtime CADENCE_AGENT_BASE/USE_MOCK (NEXT_PUBLIC is build-inlined), default port 47821, .env.example; smoke-verified offline(503)/mock; lint+build green; commit cb00cf4
 ```
 
 ---

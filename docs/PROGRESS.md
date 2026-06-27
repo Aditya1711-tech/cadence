@@ -102,7 +102,7 @@ OPEN      P1-C -> P1-A : expose install-time member_id via the local API so all 
 2026-06-27  P1-C.6  doing  popup: today's top sites (via daemon /timeline), pause toggle, privacy toggle; paused wired into tracker
 2026-06-27  P1-C.6  done   popup.html/css + popup.ts (pause toggle, urlPrivacy select, today's top sites via daemon /timeline + offline state); paused honored in reconcile + storage.onChanged for prompt effect; sites helpers verified (15 asserts), build green; in-browser render -> P1-C.7; commit 786aeab
 2026-06-27  P1-C.7  doing  formalize verification: node:test suites (focusLogic/categorize/emit/sites) + manual on-machine E2E doc; fill Variables block
-2026-06-27  P1-C.7  done   npm test green (33 cases): spanToEvent Validate-clean + domain_only redaction verified, categorize, focus state machine, popup aggregation; manual live E2E checklist (ext-chrome/docs/02-verification.md) for founder box (no Go here); Variables block filled. P1-C stream COMPLETE. commit <pending>
+2026-06-27  P1-C.7  done   npm test green (33 cases): spanToEvent Validate-clean + domain_only redaction verified, categorize, focus state machine, popup aggregation; manual live E2E checklist (ext-chrome/docs/02-verification.md) for founder box (no Go here); Variables block filled. P1-C stream COMPLETE. commit 928829e
 ```
 
 ---

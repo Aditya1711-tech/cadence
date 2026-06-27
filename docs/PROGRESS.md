@@ -28,7 +28,15 @@ NEEDS  P1-D -> P1-A : freeze local read contract — (1) GET /timeline returns f
        (3) CORS for localhost dev origin OR confirm same-origin proxy;
        (4) confirm no auth on 127.0.0.1 loopback; (5) polling vs SSE for live
        refresh; (6) RFC 7807 errors on local route. See
-       web/dashboard/docs/REQUIREMENTS-P1-D.md (P1-D.2). Blocks P1-D.3+.
+       web/dashboard/docs/REQUIREMENTS-P1-D.md (P1-D.2). Live wiring (P1-D.8)
+       blocked on P1-A.5; UI built against frozen Event Contract behind a
+       mock adapter meanwhile.
+
+NOTE   P1-D : Phase-1 dashboard is a self-contained Next.js app rooted at
+       /web/dashboard/ (no web-spine stream exists in Phase 1). The shared
+       /web shell refactor for /web/admin (P2-E) + /web/insights (P3) is
+       deferred to the P2 web spine. Actual check cmd: cd web/dashboard &&
+       npm ci && npm run lint && npm run build.
 ```
 
 ---
@@ -69,7 +77,7 @@ NEEDS  P1-D -> P1-A : freeze local read contract — (1) GET /timeline returns f
 ### P1-D — personal dashboard (local)
 - [x] P1-D.1 explore day-one dashboard content
 - [!] P1-D.2 agree local read contract with P1-A (proposal drafted; awaiting P1-A — see NEEDS)
-- [ ] P1-D.3 Next.js dashboard reading local route
+- [x] P1-D.3 Next.js dashboard reading local route
 - [ ] P1-D.4 daily timeline ribbon
 - [ ] P1-D.5 category breakdown + top projects
 - [ ] P1-D.6 focus score
@@ -90,6 +98,8 @@ NEEDS  P1-D -> P1-A : freeze local read contract — (1) GET /timeline returns f
 2026-06-27  P1-D.2  doing  drafting proposed local read contract for P1-A
 2026-06-27  P1-D.1  done   day-one content + focus-score def + states; see REQUIREMENTS-P1-D.md; commit cc31479
 2026-06-27  P1-D.2  block  read contract proposed; awaiting P1-A to freeze (NEEDS filed); blocks P1-D.3+
+2026-06-27  P1-D.3  doing  scaffold self-contained Next.js app under web/dashboard
+2026-06-27  P1-D.3  done   Next.js app + TS Event Contract mirror + agent client (http/mock) + /api/timeline proxy (RFC7807) + summary engine; reads via mock, lint+build green, smoke-tested; commit 7ac6b4a
 ```
 
 ---

@@ -5,7 +5,7 @@
 > `[!]` blocked. Every `[x]` must be committed. Resuming sessions read this file
 > and the Build Log only — never the whole codebase.
 
-Last updated: 2026-06-28  ·  by stream: P2-B
+Last updated: 2026-06-28  ·  by stream: P2-C
 
 ---
 
@@ -21,6 +21,13 @@ Last updated: 2026-06-28  ·  by stream: P2-B
 ```
 (none yet — add cross-stream requests here, e.g.)
 NEEDS  P2-E -> P2-A : /api/v1/org/summary returns per-category daily buckets
+
+OPEN   P2-C -> P1-A : wire the token watcher into the daemon — one call in
+          agent/cmd/cadence-agent/main.go (P1-A-owned) to start the token
+          collector alongside startCollector(). INTERIM: P2-C ships a
+          standalone runnable agent/token/cmd/cadence-token that POSTs to the
+          same loopback /events route, so no P1-A change blocks P2-C. Adopt the
+          in-daemon wire when P1-A resumes (mac/linux handoff session).
 
 RESOLVED  P2-E -> P2-A : /org/summary returns org_by_day[] (per-day per-category
           buckets) + org_totals_by_category[] + by_member[] (privacy-bounded).
@@ -226,8 +233,8 @@ protocol §8 the phase gate is not satisfied until those pass.
 - [x] P2-B.6 backoff/offline durability tests
 
 ### P2-C — token watcher
-- [ ] P2-C.1 explore tool log locations/formats
-- [ ] P2-C.2 confirm counts-only (no content)
+- [x] P2-C.1 explore tool log locations/formats
+- [x] P2-C.2 confirm counts-only (no content)
 - [ ] P2-C.3 per-tool parsers → events
 - [ ] P2-C.4 incremental tail + project attribution
 - [ ] P2-C.5 backend cost aggregation
@@ -282,6 +289,11 @@ protocol §8 the phase gate is not satisfied until those pass.
 2026-06-28  P2-B.5  done   enrollment (cloudsync.Enroll + `cadence-agent enroll <code>`): redeem one-time device code via POST /auth/device/enroll -> {member_id,access,refresh} persisted; adopts canonical member_id; trimCode accepts bare code or enroll URL. `cadence-agent status` reports enrolled/member_id/synced-rows. commit 0dfaab0
 2026-06-28  P2-B.6  done   backoff + offline durability: exp-backoff+full-jitter (Backoff, deterministic-seedable); watermark never advances on failure so days-offline backlog flushes on recovery; 24 tests green across state/keystore/client/backoff/syncer (offline->recover, dedupe idempotency, reactive refresh, re-enroll, batch>1000, ctx-cancel). `cd agent && go build ./... && go test ./...` GREEN (go1.26). commit 0dfaab0
 2026-06-28  P2-B     note   ENV added beyond phase-doc list: CADENCE_SYNC_DB_PATH (sidecar DB path; defaults to sibling of CADENCE_DB_PATH: ~/.config/cadence/cadence-sync.db). Existing: CADENCE_CLOUD_BASE (default http://localhost:8080), CADENCE_SYNC_INTERVAL_SEC (default 300). Member token in keychain, not env. Phase-completion gate: add these to docs/ENV-VARIABLES.md (spine-owned) before Phase-2 close.
+2026-06-27  P2-C     note   START: rebased onto origin/master (already at e5af75a, P2-A.CONTRACT in base — no-op). Read coordination block: ingest STAMPS org_id+member_id from JWT (ignores client member_id); token events flow via the SAME loopback /events route as other collectors then sync (P2-B); backend = ONE Spring Boot jar, P2-C adds package com.cadence.token only (do NOT edit com.cadence.query/ingest).
+2026-06-27  P2-C.1  done   tool-log-location survey VERIFIED against real on-disk logs: Claude Code ~/.claude/projects/<cwd-slug>/<sessionId>.jsonl (assistant lines: message.model + message.usage.{input,output,cache_creation,cache_read}_tokens; top-level timestamp+cwd; NO cost field); Codex ~/.codex/sessions/YYYY/MM/DD/rollout-*.jsonl (session_meta.cwd + event_msg/token_count info.last_token_usage; cached_input is SUBSET of input; NO cost field); Cursor server-side only -> deferred to a future Admin-API connector. Cost MUST be computed from tokens x per-model pricing. Auto-detect by probing paths (zero config). Doc agent/token/docs/P2-C.1-tool-log-locations.md; commit <pending>
+2026-06-27  P2-C.2  done   counts-only confirmed ENFORCEABLE: both logs contain full conversation text in the same files, so privacy = extract an ALLOW-LIST of fields (ts/model/tokens/cost/project) per line, never a deny-list; message.content/base_instructions/tool args dropped at decode; token events carry null title/url so safe at every privacy level; sentinel test guards against content capture. Doc agent/token/docs/P2-C.2-counts-only-privacy.md; commit <pending>
+2026-06-27  P2-C     note   P2-C.5 SCOPE: P2-A ALREADY built the token aggregation primitives in ITS owned code — CAGG events_daily_tokens (per org/member/model/day cost+tokens, tagged "P2-C.5") in V1__init.sql + per-model TokenSummary in /me/summary & /org/summary (MeQueryService/OrgQueryService query raw events where source='token'). So P2-C.5's non-overlapping value = a dedicated per-member/model/DAY token endpoint under com.cadence.token backed by events_daily_tokens (currently it has NO consumer), feeding the P2-E admin token panel. Will NOT duplicate or edit P2-A's query package.
+2026-06-27  P2-C     note   INTEGRATION PLAN (pre-impl, pending user OK): collector ships as a self-contained package agent/token + standalone runnable agent/token/cmd/cadence-token that POSTs to the daemon loopback /events (no P1-A changes needed, independently testable). Eventual in-daemon wiring (one line in agent/cmd/cadence-agent/main.go, P1-A-owned) filed as a NEEDS line below.
 ```
 
 ---

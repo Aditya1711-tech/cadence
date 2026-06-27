@@ -87,7 +87,7 @@ NOTE   P1-D : env var correction — the phase-doc P1-D var
 - [x] P1-D.5 category breakdown + top projects
 - [x] P1-D.6 focus score
 - [x] P1-D.7 empty/offline states
-- [ ] P1-D.8 verify with real local data
+- [x] P1-D.8 verify with real local data (single machine; both-machines dogfood is phase-exit work)
 
 **Build Log — Phase 1**
 ```
@@ -114,6 +114,7 @@ NOTE   P1-D : env var correction — the phase-doc P1-D var
 2026-06-27  P1-D.6  done   FocusCard: 0-100 score + band (Focused/Mixed/Fragmented) + plain-language read (deep blocks/longest/switches); lint+build green, smoke-verified; commit 7275b56
 2026-06-27  P1-D.7  doing  friendly offline/empty/error/loading states + live polling
 2026-06-27  P1-D.7  done   StatePanel (offline w/ start cmd+retry, empty, error, loading skeleton) + LiveDay client polls /api/timeline every 60s; fixed env: runtime CADENCE_AGENT_BASE/USE_MOCK (NEXT_PUBLIC is build-inlined), default port 47821, .env.example; smoke-verified offline(503)/mock; lint+build green; commit cb00cf4
+2026-06-27  P1-D.8  done   e2e against REAL daemon: built+ran cadence-agent (temp store, :47821), POSTed 14 events (idempotent), dashboard rendered real data via proxy (hero/ribbon/focus/donut/projects); offline->503 friendly state; both-machines dogfood noted as phase-exit; see VERIFICATION-P1-D.8.md; commit 11a99ed
 ```
 
 ---

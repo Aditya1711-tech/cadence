@@ -59,14 +59,24 @@ streams together.
 
 ### Variables to set
 ```
-DATABASE_URL=postgres://cadence:<pw>@localhost:5432/cadence
+# NOTE: Spring needs a JDBC URL scheme. Use jdbc:postgresql://... (not postgres://).
+DATABASE_URL=jdbc:postgresql://localhost:5432/cadence
 DATABASE_USER=cadence
 DATABASE_PASSWORD=
-JWT_SIGNING_SECRET=            # 32+ byte random; rotate via env
+JWT_SIGNING_SECRET=            # 32+ byte random; backend refuses to start if shorter
 JWT_TTL_MINUTES=60
 REDIS_URL=redis://localhost:6379
 SERVER_PORT=8080
 DEFAULT_ORG_PRIVACY=categories_only
+
+# Added by P2-A (email + link building; see P2-A.2 exploration):
+APP_PUBLIC_BASE_URL=http://localhost:3000   # base for invite/reset links
+SMTP_HOST=                    # empty in dev -> reset/enroll links are logged
+SMTP_PORT=587
+SMTP_USERNAME=
+SMTP_PASSWORD=
+SMTP_FROM=no-reply@cadence.local
+SMTP_STARTTLS=true
 ```
 
 ---

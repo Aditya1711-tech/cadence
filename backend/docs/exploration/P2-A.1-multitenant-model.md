@@ -197,32 +197,40 @@ is the server-side guarantee §6 demands. (Note left for P2-B in Coordination.)
 
 ---
 
-## 4. Privacy: store-at-level on ingest + enforce-on-read (§8, P2-A.7)
+## 4. Privacy: store raw, enforce on read (§8, P2-A.7) — **DECISION: store-raw**
 
 §8 says the policy is applied **server-side on ingest AND again on read**. Two
 philosophies were considered:
 
 - **(A) store raw, redact on read** — flexible (change level later, history
-  adapts) but the cloud holds window titles even under `categories_only`, which
-  contradicts the trust-first identity (§1: *"only what the user opts to share
-  leaves the device"*).
+  adapts retroactively). Cost: the cloud DB physically holds window titles even
+  under `categories_only`, relying on the read layer (never the storage) to keep
+  them from the admin.
 - **(B) store-at-level on ingest** — the cloud never persists what the level
-  forbids. Stronger guarantee, matches identity. Cost: lowering then raising the
-  level cannot recover detail that was never stored.
+  forbids; stronger at-rest guarantee but lowering→raising the level cannot
+  recover detail that was never stored.
 
-**Recommendation: (B), with read-side enforcement as defense in depth.** The
-daemon already redacts to the org level before sync (P2-B.3); the server
-re-applies it on ingest (never trust the client) and again on read.
+**DECISION (user, 2026-06-27): (A) store raw, redact on read.** Events are
+persisted with all fields as received; the **read/query layer** is the single
+authoritative privacy enforcement point, applied per the org's `privacy_level`.
+This satisfies §6's "never trust the client to have redacted" because the server
+controls exactly what each endpoint *returns* — the client cannot widen its own
+visibility. The daemon's own pre-sync privacy filter (P2-B.3) remains a separate
+client-side control; the server does not depend on it.
 
-| org `privacy_level` | stored on ingest | `/me/*` returns | `/org/*` (admin) returns |
+Implications for the schema (P2-A.3): **no redaction columns or ingest-side
+nulling** — `events` stores the full contract row. Privacy lives entirely in the
+query layer (P2-A.7) and the CAGGs that back `aggregate_only`.
+
+| org `privacy_level` | stored | `/me/*` returns | `/org/*` (admin) returns |
 |---|---|---|---|
 | `full` | all fields | all | all |
-| `categories_only` | `app`, `title`, `url` → NULL; keep category/duration/project/source/is_idle | stored (no titles/urls/app) | same |
-| `aggregate_only` | per-event rows kept (app/title/url/project NULL) **only** to feed CAGGs | **daily category totals only**, no per-event | daily category totals only |
+| `categories_only` | all fields (raw) | category/duration/project (app/title/url stripped on read) | same |
+| `aggregate_only` | all fields (raw) | **daily category totals only** (served from CAGG), no per-event | daily category totals only |
 
 The §8 table describes "what the org admin sees"; the member's rich per-event
-view is the **local** dashboard (P1-D). The cloud serves what the level allowed
-into storage.
+view is the **local** dashboard (P1-D). The cloud read layer is where the level
+is enforced.
 
 ---
 
@@ -273,12 +281,12 @@ endpoint shapes that P2-B/P2-E depend on are frozen in P2-A.2.
 
 ---
 
-## 7. Open decisions to confirm with the user before P2-A.3
+## 7. Decisions (RESOLVED by user, 2026-06-27)
 
-1. **`job_queue.org_id` extension** to the frozen §7 DDL (justified by the
-   tenancy rule + P2-F per-org cap). OK to encode?
-2. **Privacy philosophy (B) store-at-level on ingest** vs (A) store-raw. (B)
-   recommended.
-3. **Teams as a join table** vs single `members.team_id`. Join table recommended.
-4. **Login disambiguation** when one email exists in multiple orgs: require
-   `org_slug` on `/auth/login` when ambiguous (detail in P2-A.2).
+1. **`job_queue.org_id` extension** to the frozen §7 DDL — **ADD it** (tenancy
+   rule + P2-F per-org token cap). Documented contract extension.
+2. **Privacy** — **store raw, redact on read** (option A; see §4). Read layer is
+   the authoritative enforcement point; no ingest-side nulling.
+3. **Teams** — **`team_members` join table** (multi-team; clean rollup history).
+4. **Login disambiguation** — require `org_slug` on `/auth/login` only when one
+   email maps to multiple orgs (detail in P2-A.2).

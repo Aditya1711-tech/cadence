@@ -178,9 +178,24 @@ POST /auth/password/reset {token, new_password}
  → validate+mark used; set password_hash; revoke all refresh tokens for member
  → 204
 ```
-Email delivery: no SES wired in Phase 2 spine yet. Dev mode logs the link / lets
-the dev fetch it; SES is a later wiring (note for P2-A.8 / deploy). Flagging so
-P2-E's "forgot password" page degrades gracefully in local dev.
+Email delivery — **DECISION (user, 2026-06-27): log the link in dev AND wire
+SMTP for prod.** A `Mailer` abstraction with two implementations:
+- **dev / no SMTP configured** → log the reset/enroll link (and optionally
+  return it in the response under a dev flag) so the local-cloud milestone works
+  with zero email setup. P2-E's "forgot password" page degrades gracefully.
+- **prod** → JavaMail `JavaMailSender` over SMTP (any provider — keeps AWS
+  surface minimal vs SES). Selected when `SMTP_HOST` is set.
+
+New env vars (added to the P2-A Variables block / ENV-VARIABLES.md):
+```
+SMTP_HOST=                 # unset -> dev log-only mailer
+SMTP_PORT=587
+SMTP_USERNAME=
+SMTP_PASSWORD=
+SMTP_FROM=no-reply@<yourdomain>
+SMTP_STARTTLS=true
+APP_PUBLIC_BASE_URL=https://app.<yourdomain>   # for building reset/invite links
+```
 
 ---
 
@@ -222,10 +237,10 @@ hashes. Encoded in `V1__init.sql` (P2-A.3) alongside the core model.
 
 ---
 
-## 8. Open decisions to confirm before P2-A.3
-1. **Refresh-token TTL** as a code constant (60d) vs a new env var. Constant
-   recommended for v1 (fewer knobs).
-2. **Device-enroll path**: ship the web→code→daemon path now; leave the
-   headless invite-token fast-path to P2-B. Confirm.
-3. **Email in dev**: log reset/enroll links (no SES in the spine). Confirm this
-   is acceptable for the Phase-2 local-cloud milestone.
+## 8. Decisions (RESOLVED by user, 2026-06-27)
+1. **Refresh-token TTL** — code constant (60d) for v1; promote to env var only if
+   a customer needs it.
+2. **Device-enroll path** — ship the web→code→daemon path now; headless
+   invite-token fast-path left to P2-B.
+3. **Email** — log the link in dev AND wire SMTP for prod (see §4). `Mailer`
+   abstraction selects by `SMTP_HOST` presence.

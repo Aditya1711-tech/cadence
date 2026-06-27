@@ -1,0 +1,8 @@
+# Gradle / build outputs (the wrapper itself IS committed)
+.gradle/
+build/
+!gradle/wrapper/gradle-wrapper.jar
+
+# Local env
+.env
+*.log

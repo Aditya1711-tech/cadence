@@ -1,0 +1,54 @@
+spring:
+  application:
+    name: cadence-backend
+  threads:
+    virtual:
+      enabled: true            # §3 — virtual threads ON (not WebFlux)
+  jackson:
+    property-naming-strategy: SNAKE_CASE   # wire shape = Event Contract (§5)
+    default-property-inclusion: non_null
+    serialization:
+      write-dates-as-timestamps: false     # RFC3339 strings (§5)
+  datasource:
+    url: ${DATABASE_URL:jdbc:postgresql://localhost:5432/cadence}
+    username: ${DATABASE_USER:cadence}
+    password: ${DATABASE_PASSWORD:}
+    hikari:
+      pool-name: cadence-app
+      maximum-pool-size: 20
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+    # V1 runs non-transactionally (TimescaleDB continuous aggregates); per-script
+    # control comes from V1__init.sql.conf.
+  mail:
+    host: ${SMTP_HOST:}
+    port: ${SMTP_PORT:587}
+    username: ${SMTP_USERNAME:}
+    password: ${SMTP_PASSWORD:}
+    properties:
+      mail.smtp.starttls.enable: ${SMTP_STARTTLS:true}
+
+server:
+  port: ${SERVER_PORT:8080}
+
+cadence:
+  jwt:
+    signing-secret: ${JWT_SIGNING_SECRET:}
+    ttl-minutes: ${JWT_TTL_MINUTES:60}
+  org:
+    default-privacy: ${DEFAULT_ORG_PRIVACY:categories_only}
+  mail:
+    from: ${SMTP_FROM:no-reply@cadence.local}
+  app:
+    public-base-url: ${APP_PUBLIC_BASE_URL:http://localhost:3000}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      probes:
+        enabled: true

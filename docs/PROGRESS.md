@@ -5,14 +5,14 @@
 > `[!]` blocked. Every `[x]` must be committed. Resuming sessions read this file
 > and the Build Log only — never the whole codebase.
 
-Last updated: 2026-06-27  ·  by stream: docs-audit (P1 contract/doc reconcile)
+Last updated: 2026-06-27  ·  by stream: P2-A
 
 ---
 
 ## Contract checkpoints (gates for launching parallel waves)
 
 - [x] `P1-A.CONTRACT` — Event Contract frozen in code (Go structs + JSON, golden sample, tests green); local routes land in P1-A.5 (unblocks P1-B/C/D)
-- [ ] `P2-A.CONTRACT` — ingest + query + schema frozen (unblocks P2-B/C/D/E/F)
+- [x] `P2-A.CONTRACT` — ingest + query + schema frozen (unblocks P2-B/C/D/E/F). Schema = backend/migrations/V1__init.sql; ingest shape = EventDto/IngestResult; query shapes = Summaries.*; auth shapes = AuthDtos.*. Backend compiles (JDK21 toolchain) + 11 unit tests green; full DB e2e is authored (Testcontainers, P2-A.10) and runs on a Docker host. Frozen at code/SQL/doc level — safe to launch Wave-1.
 - [ ] `P3-A.CONTRACT` — aggregated-fact shape frozen (unblocks P3-B/C/E)
 
 ---
@@ -21,6 +21,25 @@ Last updated: 2026-06-27  ·  by stream: docs-audit (P1 contract/doc reconcile)
 ```
 (none yet — add cross-stream requests here, e.g.)
 NEEDS  P2-E -> P2-A : /api/v1/org/summary returns per-category daily buckets
+
+RESOLVED  P2-E -> P2-A : /org/summary returns org_by_day[] (per-day per-category
+          buckets) + org_totals_by_category[] + by_member[] (privacy-bounded).
+          Shape = com.cadence.query.Summaries.OrgSummary. (P2-A.5)
+RESOLVED  (P1 member_id gap) P2-A : canonical member_id = members.id, assigned by
+          the backend at INVITE-ACCEPT / DEVICE-ENROLL. The daemon learns it via
+          POST /api/v1/auth/device/enroll {code} -> {member_id, access, refresh};
+          all collectors on a machine then share it. Ingest STAMPS org_id+member_id
+          from the JWT and ignores any client-supplied member_id. P2-B: stop self-
+          generating uuids once enrolled; adopt the returned member_id.
+NOTE   P2-A -> P2-F : job_queue categorize PAYLOAD shape = {"event_id":"<uuid>",
+          "ts_start":"<rfc3339>"}; job_queue row carries org_id. Worker claims via
+          SELECT ... FOR UPDATE SKIP LOCKED, reads the event under org context,
+          writes back category. Confirm/extend before P2-F.3.
+NOTE   P2-A -> ALL  : auth contract for clients — Authorization: Bearer <access JWT>
+          (HS256, 60m); refresh via POST /auth/refresh {refresh_token} (rotating;
+          reuse revokes the family). Ingest=POST /api/v1/ingest/events (array<=1000,
+          idempotent). Backend is ONE Spring Boot jar; add per-stream packages under
+          com.cadence.<stream> (do not edit other streams' packages).
 
 RESOLVED  P1-C -> P1-A : local route + CORS — P1-A.5 ships POST /events on 127.0.0.1:47821 (default); manifest host_permissions http://127.0.0.1/* grants the SW cross-origin access, so no server CORS needed. (verified by reading agent/internal/api/server.go)
 OPEN      P1-C -> P1-A : expose install-time member_id via the local API so all collectors share one identity — NOT provided by P1-A.5 (server stores whatever member_id the event carries). INTERIM: chrome self-generates a stable uuid in storage; should adopt the daemon's id once exposed. (also affects P1-B)
@@ -180,14 +199,14 @@ protocol §8 the phase gate is not satisfied until those pass.
 ### P2-A — backend / auth / schema / contracts  (SPINE)
 - [x] P2-A.1 explore multi-tenant model + onboarding UX
 - [x] P2-A.2 explore JWT/invite flows
-- [ ] P2-A.3 Flyway V1 schema (orgs/members/teams/seats/events hypertable/job_queue/aggregates)
-- [ ] P2-A.4 ingest endpoint (idempotent, privacy-applied)  ← ticks P2-A.CONTRACT
-- [ ] P2-A.5 me/* + org/* query endpoints
-- [ ] P2-A.6 auth endpoints + RLS
-- [ ] P2-A.7 privacy enforcement layer
-- [ ] P2-A.8 health/logging/tracing
-- [ ] P2-A.9 docker-compose local cloud
-- [ ] P2-A.10 e2e privacy-level verification
+- [x] P2-A.3 Flyway V1 schema (orgs/members/teams/seats/events hypertable/job_queue/aggregates)
+- [x] P2-A.4 ingest endpoint (idempotent, privacy-applied)  ← ticks P2-A.CONTRACT
+- [x] P2-A.5 me/* + org/* query endpoints
+- [x] P2-A.6 auth endpoints + RLS
+- [x] P2-A.7 privacy enforcement layer
+- [x] P2-A.8 health/logging/tracing
+- [x] P2-A.9 docker-compose local cloud
+- [~] P2-A.10 e2e privacy-level verification (Testcontainers e2e AUTHORED + compiles; running it needs a Docker host — not available on this Windows dev box; HANDOFF)
 
 ### P2-B — sync engine
 - [ ] P2-B.1 explore sync strategy
@@ -233,6 +252,18 @@ protocol §8 the phase gate is not satisfied until those pass.
 2026-06-27  P2-A.1  done   multi-tenant model + onboarding UX exploration: shared-schema + RLS by org_id; orgs/members/teams(+team_members join)/seats/invites/events-hypertable(+org_id,member_id; idempotency UNIQUE(event_id,ts_start))/job_queue(+org_id ext)/CAGGs(daily+hourly category, daily token); privacy store-at-level-on-ingest+enforce-on-read; canonical member_id=members.id resolves P1 gap; backend/docs/exploration/P2-A.1-multitenant-model.md; commit c7ec598
 2026-06-27  P2-A.2  done   auth/invite exploration: HS256 access JWT (60m) + opaque rotating refresh (reuse-detect family) + one_time_tokens (password_reset/device_enroll); endpoints register-org/login/refresh/logout/invite-accept/password-reset/device-enroll; RLS via set_config(app.current_org) per-request; backend/docs/exploration/P2-A.2-auth-invite-flow.md; commit c7ec598
 2026-06-27  P2-A     note   STOP per kickoff: data model + auth/invite flow presented to user for review BEFORE writing V1 migration (P2-A.3). 4 open decisions flagged (job_queue.org_id ext, privacy store-at-level, teams join table, login org disambiguation).
+2026-06-27  P2-A     note   USER DECISIONS: (1) privacy = STORE RAW, redact on READ (not store-at-level); (2) job_queue +org_id YES; (3) teams = join table YES; (4) email = log link in dev + SMTP for prod. Exploration docs updated to match. Login org disambiguation via org_slug confirmed.
+2026-06-27  P2-A.3  done   Flyway V1__init.sql SCHEMA CONTRACT: orgs/members/teams/team_members/seats/invites/refresh_tokens/one_time_tokens/events(hypertable on ts_start, idempotency UNIQUE(event_id,ts_start))/job_queue(+org_id); RLS org_isolation on all org tables (current_setting app.current_org); CAGGs daily+hourly category + daily token(by model); non-transactional via V1__init.sql.conf (Timescale CAGG limitation). Gradle/SpringBoot3.3/JDK21 skeleton bootstrapped (wrapper+toolchain auto-provision); migrations packaged to classpath db/migration; commit 7db9319
+2026-06-27  P2-A.4  done   POST /api/v1/ingest/events: array<=1000 (413 over), non-empty (400), idempotent ON CONFLICT(event_id,ts_start) DO NOTHING, org_id+member_id STAMPED from JWT (never body), enqueues categorize jobs for null-category events; shape EventDto(in)/IngestResult{received,stored,duplicates}; ticks P2-A.CONTRACT; unit-tested (size rules + snake_case wire shape); commit 7db9319
+2026-06-27  P2-A.5  done   /me/timeline (keyset cursor+limit), /me/summary (range), /org/members (paginated roster+teams), /org/summary (range,team, privacy-aware); shapes in Summaries.*; explicit org_id filters on every query (defense-in-depth; RLS backstop); commit 7db9319
+2026-06-27  P2-A.6  done   auth: HS256 access JWT (JwtService) + opaque rotating refresh w/ family reuse-detection (RefreshTokenService) + one_time_tokens; endpoints register-org/login(org_slug disambig)/refresh/logout/invite-create(admin)/invite-preview/invite-accept/password.forgot+reset/device-codes(member)/device.enroll; BCrypt(12); Spring Security stateless + problem+json 401/403; RLS bind via Tenancy.set_config; commit 7db9319
+2026-06-27  P2-A.7  done   privacy enforcement on READ (store-raw decision): PrivacyLevel enum {full,categories_only,aggregate_only}; /org/summary aggregate_only -> org daily totals only (no by_member), categories_only/full -> per-member rollups; redactForAdmin strips app/title/url for event-level admin reads; unit-tested; commit 7db9319
+2026-06-27  P2-A.8  done   actuator health (liveness/readiness) + RequestTraceFilter (X-Request-Id -> MDC traceId) + logback-spring.xml pattern; commit 7db9319
+2026-06-27  P2-A.9  done   deploy/docker-compose.yml (timescaledb pg16 + redis7 + backend) + initdb/00-app-role.sql (cadence_app RLS role) + .env.example + backend/Dockerfile (multistage JDK21); commit 7db9319
+2026-06-27  P2-A.10 doing  e2e authored: backend/src/integrationTest E2EIngestQueryIT (Testcontainers timescaledb): register->ingest->idempotency->/me/summary(+tokens)->/org/summary privacy(categories_only vs aggregate_only). Compiles; NEEDS Docker host to run (absent on this Windows box). HANDOFF.
+2026-06-27  P2-A     note   BUILD/VERIFY status: `cd backend && ./gradlew build` GREEN (JDK21 auto-provisioned via foojay toolchain; 11 unit tests pass; bootJar built). NOT verified here: Flyway apply against real Timescale + integrationTest e2e (no Docker/Postgres on this box) — same dev-box limit as P1-A mac/linux. Run on a Docker host: `cd backend && ./gradlew integrationTest`.
+2026-06-27  P2-A     note   ARCH DECISION (affects Wave-1): single Spring Boot module, package-by-feature under backend/src/main/java/com/cadence/<feature> (ingest, query, auth, security, tenancy, mail, common). §9's per-stream /backend/<dir> map to packages: worker->com.cadence.worker (P2-F), token->com.cadence.token (P2-C), github->com.cadence.github (P2-D). One deployable jar on one EC2 box (§4). Streams add their own package; avoid editing others'.
+2026-06-27  P2-A     note   MERGE PENDING: P2-A.CONTRACT work is committed on stream/p2-a-backend (8fd616a) and is FF-able onto master, BUT the ff-merge is currently BLOCKED — the primary worktree (C:/learn/cadence) has UNCOMMITTED Phase-1 docs-audit changes (00-SYSTEM-KNOWLEDGE §7.1, ENV/LOCAL/PHASE-1/PROGRESS). Not disturbing them. NEXT: human commits the P1 audit on master, then rebase this branch on updated master and ff-merge. (Audit confirmed ZERO change to §5/§6/§7 cloud contracts — only adds Phase-1 local-store §7.1.)
 ```
 
 ---

@@ -1,0 +1,176 @@
+# PROGRESS — living tracker
+
+> **This file is the source of truth for state.** Update it on the go (see
+> `02-PROGRESS-PROTOCOL.md`). States: `[ ]` todo · `[~]` doing · `[x]` done ·
+> `[!]` blocked. Every `[x]` must be committed. Resuming sessions read this file
+> and the Build Log only — never the whole codebase.
+
+Last updated: _set on each edit_  ·  by stream: _____
+
+---
+
+## Contract checkpoints (gates for launching parallel waves)
+
+- [ ] `P1-A.CONTRACT` — Event Contract + local routes frozen in code (unblocks P1-B/C/D)
+- [ ] `P2-A.CONTRACT` — ingest + query + schema frozen (unblocks P2-B/C/D/E/F)
+- [ ] `P3-A.CONTRACT` — aggregated-fact shape frozen (unblocks P3-B/C/E)
+
+---
+
+## Coordination block (NEEDS lines)
+```
+(none yet — add cross-stream requests here, e.g.)
+NEEDS  P2-E -> P2-A : /api/v1/org/summary returns per-category daily buckets
+```
+
+---
+
+## Phase 1 — Foundation
+
+### P1-A — agent core / store / contract / classifier  (SPINE)
+- [ ] P1-A.1 explore active-window detection per OS
+- [ ] P1-A.2 explore idle detection approach
+- [ ] P1-A.3 Event Contract structs + JSON  ← ticks P1-A.CONTRACT
+- [ ] P1-A.4 encrypted SQLite store + APIs
+- [ ] P1-A.5 local 127.0.0.1 collector/read routes
+- [ ] P1-A.6 active-window + idle collector
+- [ ] P1-A.7 rule-based classifier + default ruleset
+- [ ] P1-A.8 local redaction list (hashing)
+- [ ] P1-A.9 background service (launchd/systemd)
+- [ ] P1-A.10 resource budget verification
+- [ ] P1-A.11 24h soak test both machines
+
+### P1-B — VSCode extension
+- [ ] P1-B.1 explore which editor events reflect real time
+- [ ] P1-B.2 explore project/lang capture + redaction
+- [ ] P1-B.3 track active file/lang/workspace
+- [ ] P1-B.4 emit events to daemon (debounced)
+- [ ] P1-B.5 graceful degradation when daemon down
+- [ ] P1-B.6 settings + pause command
+- [ ] P1-B.7 verify events + classification
+
+### P1-C — Chrome extension
+- [ ] P1-C.1 explore MV3 focus-time tracking
+- [ ] P1-C.2 explore privacy default (domain-only)
+- [ ] P1-C.3 track active tab + focus duration
+- [ ] P1-C.4 emit events per policy
+- [ ] P1-C.5 map dev domains to categories
+- [ ] P1-C.6 popup UI
+- [ ] P1-C.7 verify events + redaction
+
+### P1-D — personal dashboard (local)
+- [ ] P1-D.1 explore day-one dashboard content
+- [ ] P1-D.2 agree local read contract with P1-A
+- [ ] P1-D.3 Next.js dashboard reading local route
+- [ ] P1-D.4 daily timeline ribbon
+- [ ] P1-D.5 category breakdown + top projects
+- [ ] P1-D.6 focus score
+- [ ] P1-D.7 empty/offline states
+- [ ] P1-D.8 verify with real local data
+
+**Build Log — Phase 1**
+```
+(append newest at bottom: date  task-id  state  note; commit <sha>)
+```
+
+---
+
+## Phase 2 — Cloud + Org
+
+### P2-A — backend / auth / schema / contracts  (SPINE)
+- [ ] P2-A.1 explore multi-tenant model + onboarding UX
+- [ ] P2-A.2 explore JWT/invite flows
+- [ ] P2-A.3 Flyway V1 schema (orgs/members/teams/seats/events hypertable/job_queue/aggregates)
+- [ ] P2-A.4 ingest endpoint (idempotent, privacy-applied)  ← ticks P2-A.CONTRACT
+- [ ] P2-A.5 me/* + org/* query endpoints
+- [ ] P2-A.6 auth endpoints + RLS
+- [ ] P2-A.7 privacy enforcement layer
+- [ ] P2-A.8 health/logging/tracing
+- [ ] P2-A.9 docker-compose local cloud
+- [ ] P2-A.10 e2e privacy-level verification
+
+### P2-B — sync engine
+- [ ] P2-B.1 explore sync strategy
+- [ ] P2-B.2 explore device enrollment
+- [ ] P2-B.3 outbound sync loop (filtered, batched)
+- [ ] P2-B.4 keychain token storage + refresh
+- [ ] P2-B.5 enrollment via invite link
+- [ ] P2-B.6 backoff/offline durability tests
+
+### P2-C — token watcher
+- [ ] P2-C.1 explore tool log locations/formats
+- [ ] P2-C.2 confirm counts-only (no content)
+- [ ] P2-C.3 per-tool parsers → events
+- [ ] P2-C.4 incremental tail + project attribution
+- [ ] P2-C.5 backend cost aggregation
+
+### P2-D — github integration
+- [ ] P2-D.1 explore App vs OAuth vs PAT
+- [ ] P2-D.2 design commit-only vs full-diff toggle
+- [ ] P2-D.3 GitHub App webhook → events
+- [ ] P2-D.4 map github login → member
+- [ ] P2-D.5 respect toggle
+
+### P2-E — org admin dashboard
+- [ ] P2-E.1 explore admin needs (trust-first)
+- [ ] P2-E.2 onboarding flow UX
+- [ ] P2-E.3 auth pages
+- [ ] P2-E.4 roster + invites + privacy control
+- [ ] P2-E.5 team summary (heatmap/tokens/commits)
+- [ ] P2-E.6 member drilldown (privacy-bounded)
+- [ ] P2-E.7 install instructions page
+
+### P2-F — categorisation worker
+- [ ] P2-F.1 explore escalation rules
+- [ ] P2-F.2 prompt design (fixed enum out)
+- [ ] P2-F.3 worker claims jobs + LLM call + write-back
+- [ ] P2-F.4 pattern cache
+- [ ] P2-F.5 cost guardrails + metrics
+
+**Build Log — Phase 2**
+```
+(append newest at bottom)
+```
+
+---
+
+## Phase 3 — AI Intelligence + Revenue
+
+### P3-A — insights foundation  (SPINE)
+- [ ] P3-A.1 explore aggregated-fact shape
+- [ ] P3-A.2 explore delivery + shareable card
+- [ ] P3-A.3 insights/digests migration + aggregation layer  ← ticks P3-A.CONTRACT
+- [ ] P3-A.4 weekly insights endpoint
+- [ ] P3-A.5 digest job (compute → narrate → store/email)
+- [ ] P3-A.6 prompt engineering (grounded narrative)
+- [ ] P3-A.7 shareable card render
+
+### P3-B — pattern engine
+- [ ] P3-B.1 explore useful patterns
+- [ ] P3-B.2 time-series rollups + simple models
+- [ ] P3-B.3 expose to digest + admin
+- [ ] P3-B.4 confidence thresholds
+
+### P3-C — NL query
+- [ ] P3-C.1 explore safe text-to-SQL constraints
+- [ ] P3-C.2 schema-aware prompt → SQL (read-only, scoped)
+- [ ] P3-C.3 nl query endpoint
+- [ ] P3-C.4 query UI + charts
+
+### P3-D — billing
+- [ ] P3-D.1 explore pricing → Stripe mapping
+- [ ] P3-D.2 products/prices + checkout + portal
+- [ ] P3-D.3 webhook lifecycle handling
+- [ ] P3-D.4 feature gating by plan
+- [ ] P3-D.5 token-overage metering
+
+### P3-E — budget alerts
+- [ ] P3-E.1 explore anomaly definition
+- [ ] P3-E.2 agent loop (compare → narrate)
+- [ ] P3-E.3 Slack + email delivery
+- [ ] P3-E.4 per-org config
+
+**Build Log — Phase 3**
+```
+(append newest at bottom)
+```

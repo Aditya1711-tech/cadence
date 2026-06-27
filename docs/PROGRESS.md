@@ -5,7 +5,7 @@
 > `[!]` blocked. Every `[x]` must be committed. Resuming sessions read this file
 > and the Build Log only — never the whole codebase.
 
-Last updated: 2026-06-28  ·  by stream: P2-C
+Last updated: 2026-06-27  ·  by stream: P2-D
 
 ---
 
@@ -28,6 +28,17 @@ OPEN   P2-C -> P1-A : wire the token watcher into the daemon — one call in
           standalone runnable agent/token/cmd/cadence-token that POSTs to the
           same loopback /events route, so no P1-A change blocks P2-C. Adopt the
           in-daemon wire when P1-A resumes (mac/linux handoff session).
+NEEDS  P2-D -> P2-A : V2 migration for installation->org mapping. New org-scoped
+          (RLS) table github_installations(id, org_id->orgs, installation_id
+          bigint UNIQUE, account_login text, mode text default
+          'commit_messages_only' CHECK in ('commit_messages_only','full_diff'),
+          suspended_at, created_at) + idx on org_id + enable RLS w/ org_isolation
+          policy on org_id. Reason: a GitHub webhook arrives keyed only by GitHub
+          installation_id; we must resolve org_id (+ privacy mode) before
+          inserting source='github' events. members.github_login already covers
+          github-user->member. Nice-to-have: partial UNIQUE(org_id,github_login)
+          WHERE github_login IS NOT NULL on members. Full proposed DDL +
+          cross-org-lookup note in backend/docs/exploration/P2-D.1-github-integration-model.md §4.
 
 RESOLVED  P2-E -> P2-A : /org/summary returns org_by_day[] (per-day per-category
           buckets) + org_totals_by_category[] + by_member[] (privacy-bounded).
@@ -240,8 +251,8 @@ protocol §8 the phase gate is not satisfied until those pass.
 - [x] P2-C.5 backend cost aggregation (code+unit-tests green; live Timescale query HANDOFF, no Docker here)
 
 ### P2-D — github integration
-- [ ] P2-D.1 explore App vs OAuth vs PAT
-- [ ] P2-D.2 design commit-only vs full-diff toggle
+- [x] P2-D.1 explore App vs OAuth vs PAT
+- [x] P2-D.2 design commit-only vs full-diff toggle
 - [ ] P2-D.3 GitHub App webhook → events
 - [ ] P2-D.4 map github login → member
 - [ ] P2-D.5 respect toggle
@@ -300,6 +311,9 @@ protocol §8 the phase gate is not satisfied until those pass.
 2026-06-28  P2-C.5  done   com.cadence.token: GET /me/tokens?range + GET /org/tokens?range&team (admin, privacy-aware) reading events_daily_tokens CAGG (P2-A defined it, no prior consumer); explicit org_id filter (CAGG not RLS-covered, per schema note); aggregate_only -> org daily totals, no by_member. NO edits to P2-A query/ingest pkgs. Shapes TokenDtos.*; gradle build GREEN + wire/range unit tests (TokenWireAndRangeTest, 3). LIVE Timescale query HANDOFF (no Docker here; same limit as P2-A.10); commit <pending>
 2026-06-28  P2-C     note   ENV VARS added by P2-C (for spine to fold into phase-doc Variables + ENV-VARIABLES.md): CADENCE_TOKEN_SOURCES (default claude_code,codex,cursor; cursor recognized but not locally tailed), CADENCE_CLAUDE_CODE_LOG_DIR + CADENCE_CODEX_LOG_DIR (optional log-dir overrides), CADENCE_CODEX_DEFAULT_MODEL (default gpt-5-codex), CADENCE_TOKEN_PRICING_PATH (JSON price overlay), CADENCE_TOKEN_STATE_DIR (cursor file dir; default OS config dir). Reuses CADENCE_AGENT_PORT/CADENCE_MEMBER_ID/CADENCE_KEYCHAIN_SERVICE from P1-A. No backend env vars added (endpoints reuse P2-A datasource).
 2026-06-28  P2-C     note   STREAM COMPLETE (build tasks): P2-C.1-.5 all [x]. Runtime-deferred like the rest of Phase-2: backend token endpoints need a Docker host for live Timescale verification; Codex parser path verified by unit tests + on-disk format (no Codex run on this box).
+2026-06-27  P2-D     note   START: verified branch in sync w/ origin/master (P2-A.CONTRACT ticked, present). Mapped backend (ingest/tenancy/security/schema): events.source + IngestService.SOURCES already allow 'github'; members.github_login pre-provisioned; Tenancy.bind(orgId,member,role) overload exists for non-JWT webhook context; HMAC via JDK javax.crypto (no new dep for default path).
+2026-06-27  P2-D.1  done   App-vs-OAuth-vs-PAT exploration: DECISION GitHub App (one admin install, whole org; least-privilege metadata:read for default mode; per-install webhooks+tokens). Lifecycle install->webhook->events. Identified the one schema gap (installation_id->org_id) -> NEEDS line to P2-A for V2 github_installations table. Zero-duration github events, deterministic uuid-v5 event_id for redelivery idempotency. backend/docs/exploration/P2-D.1-github-integration-model.md; commit PENDING_EXPL
+2026-06-27  P2-D.2  done   privacy-toggle design: commit_messages_only (default) vs full_diff (opt-in); CODE/PATCH NEVER stored in either mode — full_diff adds numeric diff STATS only (additions/deletions/changed_files). Enforcement primarily by GitHub permission scope (default needs no API calls/contents:read). Per-org mode on github_installations; privacy-safe degradation if contents:read missing. Composes with org privacy_level (read-time P2-A.7 redaction) — no new read code. backend/docs/exploration/P2-D.2-privacy-toggle.md; commit PENDING_EXPL
 ```
 
 ---

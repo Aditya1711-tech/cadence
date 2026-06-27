@@ -1,60 +1,51 @@
 // HttpAgentClient — talks to the real local daemon over loopback HTTP.
 //
-// ⚠️ PROVISIONAL: this targets the read contract PROPOSED in
-// web/dashboard/docs/REQUIREMENTS-P1-D.md (P1-D.2), which P1-A has not yet
-// frozen (P1-A.5 is still todo). Everything coupled to the wire shape lives in
-// THIS file so the freeze costs a one-file change, not a UI rewrite.
+// Reconciled to the SHIPPED P1-A.5 contract (agent/internal/api/server.go):
+//   GET /timeline?from&to  ->  a BARE JSON array of Event Contract objects.
+//   - filtered by ts_start in [from, to) (RFC3339 UTC); defaults to last 24h
+//   - no envelope, no pagination, no auth (loopback-only); errors are
+//     RFC 7807 problem+json.
+// Anything coupled to the wire shape lives in THIS file, so a future contract
+// change stays contained.
 
 import type { Event } from "@/lib/contract/event";
 import { AgentOfflineError, type AgentClient } from "@/lib/agent/client";
-
-/** Shape of `GET /timeline` as proposed in P1-D.2 (pending P1-A confirmation). */
-interface TimelineResponse {
-  events: Event[];
-  next_cursor: string | null;
-}
-
-const MAX_PAGES = 100; // safety bound; a day is a few hundred events / a few pages
 
 export class HttpAgentClient implements AgentClient {
   constructor(private readonly baseUrl: string) {}
 
   async getTimeline(from: Date, to: Date): Promise<Event[]> {
-    const events: Event[] = [];
-    let cursor: string | null = null;
+    const url = new URL("/timeline", this.baseUrl);
+    url.searchParams.set("from", from.toISOString());
+    url.searchParams.set("to", to.toISOString());
 
-    for (let page = 0; page < MAX_PAGES; page++) {
-      const url = new URL("/timeline", this.baseUrl);
-      url.searchParams.set("from", from.toISOString());
-      url.searchParams.set("to", to.toISOString());
-      if (cursor) url.searchParams.set("cursor", cursor);
-
-      let res: Response;
-      try {
-        res = await fetch(url, {
-          headers: { Accept: "application/json" },
-          cache: "no-store",
-        });
-      } catch (err) {
-        // Connection refused / DNS / timeout => daemon is offline.
-        throw new AgentOfflineError(
-          `cannot reach Cadence daemon at ${this.baseUrl}`,
-          err,
-        );
-      }
-
-      if (!res.ok) {
-        throw new Error(
-          `timeline request failed: ${res.status} ${res.statusText}`,
-        );
-      }
-
-      const body = (await res.json()) as TimelineResponse;
-      events.push(...body.events);
-      cursor = body.next_cursor;
-      if (!cursor) break;
+    let res: Response;
+    try {
+      res = await fetch(url, {
+        headers: { Accept: "application/json" },
+        cache: "no-store",
+      });
+    } catch (err) {
+      // Connection refused / DNS / timeout => daemon is offline.
+      throw new AgentOfflineError(
+        `cannot reach Cadence daemon at ${this.baseUrl}`,
+        err,
+      );
     }
 
-    return events;
+    if (!res.ok) {
+      // Surface the daemon's problem+json detail when present.
+      let detail = `${res.status} ${res.statusText}`;
+      try {
+        const body = (await res.json()) as { detail?: string; title?: string };
+        detail = body.detail ?? body.title ?? detail;
+      } catch {
+        // non-JSON error body; keep the status line
+      }
+      throw new Error(`timeline request failed: ${detail}`);
+    }
+
+    const body = (await res.json()) as Event[];
+    return Array.isArray(body) ? body : [];
   }
 }

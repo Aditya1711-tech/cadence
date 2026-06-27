@@ -1,8 +1,7 @@
-// Local read route, proxied through Next (same-origin for the browser, so the
-// CORS question P1-A still owns doesn't block the client). Client components
-// poll this for live refresh / offline-retry (P1-D.7).
-//
-// Errors use RFC 7807 problem+json, matching the REST conventions (§6).
+// Local read route, proxied through Next (same-origin for the browser, so no
+// CORS is needed against the loopback daemon). Client components poll this for
+// live refresh / offline-retry (P1-D.7). Like the daemon (P1-A.5), it returns a
+// bare JSON array of events and uses RFC 7807 problem+json for errors (§6).
 
 import { NextRequest, NextResponse } from "next/server";
 import { getAgentClient, AgentOfflineError } from "@/lib/agent";
@@ -31,7 +30,7 @@ export async function GET(req: NextRequest) {
 
   try {
     const events = await getAgentClient().getTimeline(from, to);
-    return NextResponse.json({ events, next_cursor: null });
+    return NextResponse.json(events);
   } catch (err) {
     if (err instanceof AgentOfflineError) {
       return problem(503, "Daemon offline", err.message);

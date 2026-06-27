@@ -185,3 +185,29 @@ P1-D.3 Next.js data layer hitting these routes → P1-D.4 ribbon → P1-D.5
 breakdown/projects → P1-D.6 focus score → P1-D.7 empty/offline states →
 P1-D.8 verify with real local data. All gated on `P1-A.CONTRACT` + the answers
 above.
+
+---
+
+## P1-D.2 — RESOLVED (frozen by P1-A.5, `agent/internal/api/server.go`)
+
+P1-A shipped the loopback API. The dashboard is reconciled to the **actual**
+contract below; the proposal above is kept for history. NEEDS line cleared.
+
+| # | Open question | Frozen answer |
+|---|---|---|
+| 1 | `/timeline` payload | **Full Event Contract objects** — but a **bare JSON array**, not the `{events,next_cursor}` envelope I proposed. `getTimeline` parses the array directly. |
+| 2 | `/summary` route | **Not shipped.** The dashboard computes every rollup from `/timeline` (lib/summary.ts) — exactly the documented fallback. No blocker. |
+| 3 | CORS / origin | **Moot** — the dashboard reads the daemon **server-side** via its own `/api/timeline` route handler, so the browser is same-origin and the daemon never sees a cross-origin request. |
+| 4 | Auth on local route | **No auth.** Daemon enforces loopback-only (`loopbackOnly` middleware rejects non-loopback peers); nothing else is needed in Phase 1. |
+| 5 | Live refresh | **Polling.** No SSE/websocket; the client polls `/api/timeline`. Implemented in P1-D.7. |
+| 6 | Errors | **RFC 7807 problem+json** confirmed on the daemon; the proxy mirrors it. |
+| 7 | Port | `CADENCE_AGENT_PORT`, **default 47821**. Dashboard reads `NEXT_PUBLIC_CADENCE_AGENT_BASE` (e.g. `http://127.0.0.1:47821`). |
+
+**Other shipped semantics the client honors:**
+- `/timeline` filters by **`ts_start` in `[from, to)`** (not overlap); the mock
+  client matches this so dev mirrors prod.
+- `from`/`to` omitted → daemon defaults to the **last 24h**. The dashboard always
+  sends explicit local-day boundaries (converted to UTC).
+- There is **no pagination**; a day's events come back in one array.
+- `POST /events` (collectors) accepts a single object or an array (max 1000),
+  idempotent on `event_id` — not used by P1-D, noted for completeness.

@@ -22,15 +22,12 @@ Last updated: 2026-06-27  ·  by stream: P1-D
 (none yet — add cross-stream requests here, e.g.)
 NEEDS  P2-E -> P2-A : /api/v1/org/summary returns per-category daily buckets
 
-NEEDS  P1-D -> P1-A : freeze local read contract — (1) GET /timeline returns full
-       Event Contract objects + cursor pagination; (2) provide GET /summary
-       rollups (preferred) or confirm dashboard computes from /timeline;
-       (3) CORS for localhost dev origin OR confirm same-origin proxy;
-       (4) confirm no auth on 127.0.0.1 loopback; (5) polling vs SSE for live
-       refresh; (6) RFC 7807 errors on local route. See
-       web/dashboard/docs/REQUIREMENTS-P1-D.md (P1-D.2). Live wiring (P1-D.8)
-       blocked on P1-A.5; UI built against frozen Event Contract behind a
-       mock adapter meanwhile.
+RESOLVED  P1-D -> P1-A : local read contract frozen by P1-A.5 (commit 3986143).
+       GET /timeline returns a bare event array (no envelope/pagination),
+       problem+json errors, loopback-only (no auth), port 47821. Dashboard
+       reads server-side via its own /api/timeline proxy (no CORS needed) and
+       computes rollups from /timeline (no /summary shipped). Client
+       reconciled. Resolution table in web/dashboard/docs/REQUIREMENTS-P1-D.md.
 
 NOTE   P1-D : Phase-1 dashboard is a self-contained Next.js app rooted at
        /web/dashboard/ (no web-spine stream exists in Phase 1). The shared
@@ -76,7 +73,7 @@ NOTE   P1-D : Phase-1 dashboard is a self-contained Next.js app rooted at
 
 ### P1-D — personal dashboard (local)
 - [x] P1-D.1 explore day-one dashboard content
-- [!] P1-D.2 agree local read contract with P1-A (proposal drafted; awaiting P1-A — see NEEDS)
+- [x] P1-D.2 agree local read contract with P1-A (frozen by P1-A.5; client reconciled)
 - [x] P1-D.3 Next.js dashboard reading local route
 - [x] P1-D.4 daily timeline ribbon
 - [x] P1-D.5 category breakdown + top projects
@@ -104,6 +101,7 @@ NOTE   P1-D : Phase-1 dashboard is a self-contained Next.js app rooted at
 2026-06-27  P1-D.4  done   cropped hourly ribbon, category-colored blocks, native tooltips, hour ticks; shared color palette; lint+build green, smoke-verified 14 blocks/8 colors; commit 7897fbb
 2026-06-27  P1-D.5  doing  category donut + top projects
 2026-06-27  P1-D.5  done   SVG category donut + legend (%s sum 100) + ranked project bars (null->Unassigned); lint+build green, smoke-verified 7 arcs; commit 38958f2
+2026-06-27  P1-D.2  done   read contract frozen by P1-A.5; reconciled HttpAgentClient to bare array (no envelope/pagination), proxy returns array, mock matches ts_start-in-range; NEEDS resolved; resolution table in REQUIREMENTS-P1-D.md; lint+build green; commit 7e2a349
 ```
 
 ---

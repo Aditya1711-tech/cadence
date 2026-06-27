@@ -98,7 +98,7 @@ OPEN      P1-C -> P1-A : expose install-time member_id via the local API so all 
 2026-06-27  P1-C.5  doing  dev-domain -> category map (github/meet/zoom/slack/so/docs/ai tools)
 2026-06-27  P1-C.5  done   contract.ts Category mirror + categorize(); host/suffix/docs rules; 15-case behavioral check green, build green; commit 844f195
 2026-06-27  P1-C.4  doing  rebased onto P1-A.5 (port 47821, POST /events); emit module: span->Event, domain_only/full policy, interim member_id, flush w/ graceful degradation
-2026-06-27  P1-C.4  done   emit.ts span->Event (domain_only origin+null-title / full), interim member_id, batched flush to 127.0.0.1:47821 w/ graceful degradation; wired to heartbeat+startup; shaping Validate-clean via ported-rules check + build green; live daemon round-trip needs running Go agent -> P1-C.7/founder machines; commit <pending>
+2026-06-27  P1-C.4  done   emit.ts span->Event (domain_only origin+null-title / full), interim member_id, batched flush to 127.0.0.1:47821 w/ graceful degradation; wired to heartbeat+startup; shaping Validate-clean via ported-rules check + build green; live daemon round-trip needs running Go agent -> P1-C.7/founder machines; commit 34d7f5c
 ```
 
 ---

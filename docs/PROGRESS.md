@@ -31,7 +31,7 @@ NEEDS  P2-E -> P2-A : /api/v1/org/summary returns per-category daily buckets
 - [x] P1-A.1 explore active-window detection per OS
 - [x] P1-A.2 explore idle detection approach
 - [x] P1-A.3 Event Contract structs + JSON  ← ticks P1-A.CONTRACT
-- [ ] P1-A.4 encrypted SQLite store + APIs
+- [x] P1-A.4 encrypted SQLite store + APIs
 - [ ] P1-A.5 local 127.0.0.1 collector/read routes
 - [ ] P1-A.6 active-window + idle collector
 - [ ] P1-A.7 rule-based classifier + default ruleset
@@ -74,6 +74,9 @@ NEEDS  P2-E -> P2-A : /api/v1/org/summary returns per-category daily buckets
 2026-06-27  P1-A.1  done   active-window detection survey (mac/linux/win); app-name-first, title opt-in via Accessibility (never Screen Recording); see agent/docs/exploration/P1-A.1; commit 490a7d2
 2026-06-27  P1-A.2  done   idle detection survey; 5s poll of OS idle counter, 300s threshold, meeting-aware suppression, backdated idle start; see agent/docs/exploration/P1-A.2; commit 490a7d2
 2026-06-27  P1-A.3  done   Event Contract Go structs+JSON (agent/internal/event), golden sample, validation, uuid-v4; go build/vet/test green; ticks P1-A.CONTRACT; commit dc270d3
+2026-06-27  P1-A.CONTRACT  done  event shape frozen on master (fd490f2); P1-B/C/D unblocked on contract; routes pending P1-A.5
+2026-06-27  P1-A.4  doing  encrypted sqlite store; app-level AES-256-GCM on title/url/meta, key in OS keychain (decided: modernc.org/sqlite has no native encryption)
+2026-06-27  P1-A.4  done   store(modernc sqlite,WAL)+crypto(AES-256-GCM)+keyring(zalando/OS+memory fake); Append idempotent, Query[from,to), encrypted-at-rest test; build/vet/test green; commit <pending>
 ```
 
 ---

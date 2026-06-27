@@ -24,6 +24,7 @@ import (
 
 	"github.com/Aditya1711-tech/cadence/agent/internal/classify"
 	"github.com/Aditya1711-tech/cadence/agent/internal/event"
+	"github.com/Aditya1711-tech/cadence/agent/internal/redact"
 )
 
 const (
@@ -43,21 +44,33 @@ type Store interface {
 	Count() (int, error)
 }
 
+// Options configures a Server. All fields are optional.
+type Options struct {
+	// Classifier, if set, fills the category of events that arrive with a null
+	// category (a category the collector already set is left untouched).
+	Classifier *classify.Classifier
+	// Redactor, if set, masks matching titles/URLs before storage. It runs
+	// AFTER classification so categories still derive from the real values.
+	Redactor *redact.Redactor
+	// Logger defaults to a discarding logger when nil.
+	Logger *slog.Logger
+}
+
 // Server serves the local API over a Store.
 type Server struct {
 	store      Store
-	classifier *classify.Classifier // may be nil to disable on-ingest classification
+	classifier *classify.Classifier
+	redactor   *redact.Redactor
 	log        *slog.Logger
 }
 
-// New builds a Server. If logger is nil, a discarding logger is used. If
-// classifier is non-nil, events that arrive with a null category are classified
-// on ingest (a category the collector already set is left untouched).
-func New(st Store, classifier *classify.Classifier, logger *slog.Logger) *Server {
+// New builds a Server from a Store and Options.
+func New(st Store, opts Options) *Server {
+	logger := opts.Logger
 	if logger == nil {
 		logger = slog.New(slog.NewTextHandler(io.Discard, nil))
 	}
-	return &Server{store: st, classifier: classifier, log: logger}
+	return &Server{store: st, classifier: opts.Classifier, redactor: opts.Redactor, log: logger}
 }
 
 // Handler returns the routed http.Handler, wrapped so only loopback peers are
@@ -117,6 +130,7 @@ func (s *Server) handlePostEvents(w http.ResponseWriter, r *http.Request) {
 		if s.classifier != nil && events[i].Category == nil {
 			s.classifier.Apply(&events[i])
 		}
+		s.redactor.Apply(&events[i]) // nil-safe; masks matching title/url before store
 		if err := s.store.Append(&events[i]); err != nil {
 			res.Rejected++
 			res.Errors = append(res.Errors, "event "+strconv.Itoa(i)+": "+err.Error())

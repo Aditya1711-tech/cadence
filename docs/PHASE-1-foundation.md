@@ -63,6 +63,8 @@ CADENCE_DB_PATH=               # default: <os.UserConfigDir>/cadence/cadence.db 
 CADENCE_KEYCHAIN_SERVICE=com.cadence.agent   # keychain service; account = "store-key"
 CADENCE_RULES_PATH=            # optional JSON classifier ruleset; scaffolded with
                               # the default on first run if missing. Unset = built-in default.
+CADENCE_REDACT_PATH=          # optional JSON {"patterns":[regex,...]}; matching titles/urls
+                              # are hashed before store. Scaffolded empty on first run. Unset = off.
 # Local collector POST route: POST http://127.0.0.1:47821/events
 #   body: a single Event Contract object OR a JSON array (max 1000); idempotent
 #   on event_id; 200 -> {"accepted":n,"rejected":m,"errors":[...]}; invalid

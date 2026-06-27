@@ -10,6 +10,7 @@ import (
 
 	"github.com/Aditya1711-tech/cadence/agent/internal/classify"
 	"github.com/Aditya1711-tech/cadence/agent/internal/event"
+	"github.com/Aditya1711-tech/cadence/agent/internal/redact"
 )
 
 // fakeStore is an in-memory Store for handler tests (no sqlite/crypto needed).
@@ -83,7 +84,7 @@ func sampleJSON(t *testing.T, id string, start time.Time) string {
 
 func TestPostSingleEvent(t *testing.T) {
 	fs := &fakeStore{}
-	h := New(fs, nil, nil).Handler()
+	h := New(fs, Options{}).Handler()
 	start := time.Date(2025, 6, 1, 9, 0, 0, 0, time.UTC)
 	rr := do(t, h, newReq(t, "POST", "/events", sampleJSON(t, "id-1", start)))
 	if rr.Code != http.StatusOK {
@@ -103,7 +104,7 @@ func TestPostSingleEvent(t *testing.T) {
 
 func TestPostArrayAndIdempotency(t *testing.T) {
 	fs := &fakeStore{}
-	h := New(fs, nil, nil).Handler()
+	h := New(fs, Options{}).Handler()
 	start := time.Date(2025, 6, 1, 9, 0, 0, 0, time.UTC)
 	body := "[" + sampleJSON(t, "id-1", start) + "," + sampleJSON(t, "id-1", start) + "," + sampleJSON(t, "id-2", start) + "]"
 	rr := do(t, h, newReq(t, "POST", "/events", body))
@@ -117,7 +118,7 @@ func TestPostArrayAndIdempotency(t *testing.T) {
 
 func TestPostRejectsInvalidEventButKeepsValid(t *testing.T) {
 	fs := &fakeStore{}
-	h := New(fs, nil, nil).Handler()
+	h := New(fs, Options{}).Handler()
 	start := time.Date(2025, 6, 1, 9, 0, 0, 0, time.UTC)
 	good := sampleJSON(t, "good", start)
 	bad := `{"event_id":"bad","schema_ver":1,"source":"not-a-source","member_id":"m1","ts_start":"2025-06-01T09:00:00Z","ts_end":"2025-06-01T09:00:00Z","duration_ms":0,"app":"x","title":null,"url":null,"project":null,"category":null,"is_idle":false,"meta":{}}`
@@ -137,7 +138,7 @@ func TestPostRejectsInvalidEventButKeepsValid(t *testing.T) {
 
 func TestPostClassifiesNullCategoryOnIngest(t *testing.T) {
 	fs := &fakeStore{}
-	h := New(fs, classify.Default(), nil).Handler()
+	h := New(fs, Options{Classifier: classify.Default()}).Handler()
 	start := time.Date(2025, 6, 1, 9, 0, 0, 0, time.UTC)
 	// sampleJSON sets category deep_work; build a null-category vscode event instead.
 	e, _ := event.New(event.SourceVSCode, "m1", start, start.Add(time.Minute), "Visual Studio Code")
@@ -156,8 +157,39 @@ func TestPostClassifiesNullCategoryOnIngest(t *testing.T) {
 	}
 }
 
+func TestPostRedactsButClassifiesFromRealValues(t *testing.T) {
+	fs := &fakeStore{}
+	red, err := redact.New([]string{`(?i)secret`})
+	if err != nil {
+		t.Fatalf("redactor: %v", err)
+	}
+	h := New(fs, Options{Classifier: classify.Default(), Redactor: red}).Handler()
+	start := time.Date(2025, 6, 1, 9, 0, 0, 0, time.UTC)
+	// A code-review URL that also matches the redaction list: category must be
+	// derived from the real URL, but the stored URL must be masked.
+	e, _ := event.New(event.SourceChrome, "m1", start, start.Add(time.Minute), "Google Chrome")
+	e.EventID = "redact-1"
+	e.Title = event.Ptr("secret PR title")
+	e.URL = event.Ptr("https://github.com/org/secret/pull/9")
+	b, _ := json.Marshal(e)
+	rr := do(t, h, newReq(t, "POST", "/events", string(b)))
+	if rr.Code != http.StatusOK {
+		t.Fatalf("status = %d, want 200; body=%s", rr.Code, rr.Body)
+	}
+	got := fs.events[0]
+	if got.Category == nil || *got.Category != event.CategoryCodeReview {
+		t.Errorf("category should derive from real url (code_review), got %v", got.Category)
+	}
+	if got.Title == nil || !strings.HasPrefix(*got.Title, redact.Prefix) {
+		t.Errorf("title should be redacted, got %v", got.Title)
+	}
+	if got.URL == nil || !strings.HasPrefix(*got.URL, redact.Prefix) {
+		t.Errorf("url should be redacted, got %v", got.URL)
+	}
+}
+
 func TestPostMalformedJSON(t *testing.T) {
-	h := New(&fakeStore{}, nil, nil).Handler()
+	h := New(&fakeStore{}, Options{}).Handler()
 	rr := do(t, h, newReq(t, "POST", "/events", "{not json"))
 	if rr.Code != http.StatusBadRequest {
 		t.Fatalf("status = %d, want 400", rr.Code)
@@ -168,7 +200,7 @@ func TestPostMalformedJSON(t *testing.T) {
 }
 
 func TestPostEmptyBody(t *testing.T) {
-	h := New(&fakeStore{}, nil, nil).Handler()
+	h := New(&fakeStore{}, Options{}).Handler()
 	rr := do(t, h, newReq(t, "POST", "/events", ""))
 	if rr.Code != http.StatusBadRequest {
 		t.Fatalf("status = %d, want 400", rr.Code)
@@ -177,7 +209,7 @@ func TestPostEmptyBody(t *testing.T) {
 
 func TestTimelineReturnsEventsInRange(t *testing.T) {
 	fs := &fakeStore{}
-	h := New(fs, nil, nil).Handler()
+	h := New(fs, Options{}).Handler()
 	base := time.Date(2025, 6, 1, 0, 0, 0, 0, time.UTC)
 	for i, off := range []time.Duration{0, time.Hour, 3 * time.Hour} {
 		e, _ := event.New(event.SourceOS, "m1", base.Add(off), base.Add(off+time.Minute), "Finder")
@@ -199,7 +231,7 @@ func TestTimelineReturnsEventsInRange(t *testing.T) {
 }
 
 func TestTimelineEmptyIsArrayNotNull(t *testing.T) {
-	h := New(&fakeStore{}, nil, nil).Handler()
+	h := New(&fakeStore{}, Options{}).Handler()
 	rr := do(t, h, newReq(t, "GET", "/timeline", ""))
 	if rr.Code != http.StatusOK {
 		t.Fatalf("status = %d, want 200", rr.Code)
@@ -210,7 +242,7 @@ func TestTimelineEmptyIsArrayNotNull(t *testing.T) {
 }
 
 func TestTimelineBadRange(t *testing.T) {
-	h := New(&fakeStore{}, nil, nil).Handler()
+	h := New(&fakeStore{}, Options{}).Handler()
 	rr := do(t, h, newReq(t, "GET", "/timeline?from=2025-06-02T00:00:00Z&to=2025-06-01T00:00:00Z", ""))
 	if rr.Code != http.StatusBadRequest {
 		t.Fatalf("status = %d, want 400", rr.Code)
@@ -225,7 +257,7 @@ func TestHealthz(t *testing.T) {
 	fs := &fakeStore{}
 	e, _ := event.New(event.SourceOS, "m1", time.Now().UTC(), time.Now().UTC(), "Finder")
 	fs.events = append(fs.events, *e)
-	h := New(fs, nil, nil).Handler()
+	h := New(fs, Options{}).Handler()
 	rr := do(t, h, newReq(t, "GET", "/healthz", ""))
 	if rr.Code != http.StatusOK {
 		t.Fatalf("status = %d, want 200", rr.Code)
@@ -241,7 +273,7 @@ func TestHealthz(t *testing.T) {
 }
 
 func TestNonLoopbackForbidden(t *testing.T) {
-	h := New(&fakeStore{}, nil, nil).Handler()
+	h := New(&fakeStore{}, Options{}).Handler()
 	req := httptest.NewRequest("GET", "/healthz", nil)
 	req.RemoteAddr = "203.0.113.7:9999" // public IP
 	rr := do(t, h, req)
@@ -251,7 +283,7 @@ func TestNonLoopbackForbidden(t *testing.T) {
 }
 
 func TestMethodNotAllowed(t *testing.T) {
-	h := New(&fakeStore{}, nil, nil).Handler()
+	h := New(&fakeStore{}, Options{}).Handler()
 	rr := do(t, h, newReq(t, "DELETE", "/events", ""))
 	if rr.Code != http.StatusMethodNotAllowed {
 		t.Fatalf("status = %d, want 405", rr.Code)

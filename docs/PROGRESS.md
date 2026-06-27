@@ -52,7 +52,7 @@ NEEDS  P2-E -> P2-A : /api/v1/org/summary returns per-category daily buckets
 ### P1-C — Chrome extension
 - [x] P1-C.1 explore MV3 focus-time tracking
 - [x] P1-C.2 explore privacy default (domain-only)
-- [ ] P1-C.3 track active tab + focus duration
+- [x] P1-C.3 track active tab + focus duration
 - [ ] P1-C.4 emit events per policy
 - [ ] P1-C.5 map dev domains to categories
 - [ ] P1-C.6 popup UI
@@ -87,8 +87,10 @@ NEEDS  P2-E -> P2-A : /api/v1/org/summary returns per-category daily buckets
 2026-06-27  P1-A     note   HANDOFF for mac/linux sessions: implement+verify collector backends (platform_darwin.go NSWorkspace+Accessibility+CGEventSource; platform_linux.go X11 EWMH+XScreenSaver / Wayland app-only); runtime-verify P1-A.9 service install; capture authoritative P1-A.10 idle-CPU on mac/linux; run P1-A.11 soak. All other P1-A code is done, tested on Windows, and on master.
 2026-06-27  P1-C.1  doing  exploring MV3 SW lifecycle + active-tab focus tracking
 2026-06-27  P1-C.2  doing  exploring domain-only privacy default + redaction honoring
-2026-06-27  P1-C.1  done   findings in ext-chrome/docs/01-requirements-exploration.md; commit 1028b0a
-2026-06-27  P1-C.2  done   domain-only default + daemon-owns-redaction; commit 1028b0a
+2026-06-27  P1-C.1  done   findings in ext-chrome/docs/01-requirements-exploration.md; commit c289a9a
+2026-06-27  P1-C.2  done   domain-only default + daemon-owns-redaction; commit c289a9a
+2026-06-27  P1-C.3  doing  scaffold MV3 ext + focus state machine (tabs/windows/idle/alarms)
+2026-06-27  P1-C.3  done   MV3 scaffold + focus state machine (focusLogic/focusTracker/index); npm ci && npm run build green; in-browser runtime verification deferred to P1-C.7; commit <pending>
 ```
 
 ---

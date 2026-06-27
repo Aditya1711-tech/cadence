@@ -1,0 +1,13 @@
+{
+  "manifest_version": 3,
+  "name": "Cadence",
+  "version": "0.1.0",
+  "description": "Privacy-first activity tracking. Local only — no screenshots, no page contents, no full URLs by default.",
+  "minimum_chrome_version": "120",
+  "permissions": ["tabs", "idle", "alarms", "storage"],
+  "host_permissions": ["http://127.0.0.1/*"],
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  }
+}

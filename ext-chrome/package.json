@@ -1,0 +1,17 @@
+{
+  "name": "cadence-ext-chrome",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Cadence Chrome (MV3) collector — privacy-first, local-only activity tracking.",
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "build": "npm run typecheck && node build.mjs",
+    "clean": "node -e \"import('node:fs').then(fs=>fs.rmSync('dist',{recursive:true,force:true}))\""
+  },
+  "devDependencies": {
+    "@types/chrome": "^0.0.287",
+    "esbuild": "^0.24.2",
+    "typescript": "^5.7.2"
+  }
+}

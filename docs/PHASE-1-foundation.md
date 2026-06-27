@@ -58,11 +58,19 @@ P1-B, P1-C, P1-D simultaneously.
 
 ### Variables to set (fill when stream completes)
 ```
-CADENCE_AGENT_PORT=            # local loopback port collectors POST to
-CADENCE_DB_PATH=               # path to encrypted sqlite file
-CADENCE_KEYCHAIN_SERVICE=      # keychain service name holding the db key
-# Local collector POST route: POST http://127.0.0.1:<port>/events
-# Local dashboard read route:  GET  http://127.0.0.1:<port>/timeline?from&to
+CADENCE_AGENT_PORT=47821       # default loopback port (override via env)
+CADENCE_DB_PATH=               # default: <os.UserConfigDir>/cadence/cadence.db (override via env)
+CADENCE_KEYCHAIN_SERVICE=com.cadence.agent   # keychain service; account = "store-key"
+# Local collector POST route: POST http://127.0.0.1:47821/events
+#   body: a single Event Contract object OR a JSON array (max 1000); idempotent
+#   on event_id; 200 -> {"accepted":n,"rejected":m,"errors":[...]}; invalid
+#   events are skipped (reported), malformed body/oversized batch -> problem+json.
+# Local dashboard read route:  GET  http://127.0.0.1:47821/timeline?from&to
+#   from/to are RFC3339 UTC (default: last 24h); 200 -> JSON array of events
+#   (decrypted), [] when empty. Canonical event shape: agent golden_event.json.
+# Health:                      GET  http://127.0.0.1:47821/healthz
+#   200 -> {"status":"ok","events":<count>,"schema_ver":1}
+# Loopback-only: non-127.0.0.1 peers get 403 (Phase-1 stand-in for auth).
 ```
 
 ---

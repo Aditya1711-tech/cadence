@@ -1,7 +1,10 @@
 import { loadDay } from "@/lib/dashboard-data";
 import { Card, CardTitle } from "@/components/ui/card";
 import { Ribbon } from "@/components/ribbon";
+import { CategoryDonut } from "@/components/category-donut";
+import { TopProjects } from "@/components/top-projects";
 import { formatDuration } from "@/lib/time";
+import type { DaySummary } from "@/lib/summary";
 import type { Event } from "@/lib/contract/event";
 
 // Server component: reads today's local activity and renders the glanceable
@@ -43,14 +46,7 @@ export default async function TodayPage() {
           body="Tracking is live — your timeline will fill in as you work."
         />
       ) : (
-        <DayView
-          events={day.events}
-          focusedMs={day.summary.focus.deepWorkMs}
-          activeMs={day.summary.activeMs}
-          idleMs={day.summary.idleMs}
-          totalMs={day.summary.totalMs}
-          eventCount={day.summary.eventCount}
-        />
+        <DayView events={day.events} summary={day.summary} />
       )}
     </main>
   );
@@ -58,18 +54,10 @@ export default async function TodayPage() {
 
 function DayView({
   events,
-  focusedMs,
-  activeMs,
-  idleMs,
-  totalMs,
-  eventCount,
+  summary,
 }: {
   events: Event[];
-  focusedMs: number;
-  activeMs: number;
-  idleMs: number;
-  totalMs: number;
-  eventCount: number;
+  summary: DaySummary;
 }) {
   return (
     <div className="space-y-6">
@@ -78,10 +66,11 @@ function DayView({
           Deep work today
         </p>
         <p className="mt-1 text-5xl font-semibold tracking-tight text-cat-deep_work">
-          {formatDuration(focusedMs)}
+          {formatDuration(summary.focus.deepWorkMs)}
         </p>
         <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">
-          {formatDuration(activeMs)} active · {formatDuration(idleMs)} idle
+          {formatDuration(summary.activeMs)} active ·{" "}
+          {formatDuration(summary.idleMs)} idle
         </p>
       </Card>
 
@@ -90,11 +79,26 @@ function DayView({
         <Ribbon events={events} />
       </Card>
 
+      <div className="grid gap-6 lg:grid-cols-2">
+        <Card>
+          <CardTitle>Categories</CardTitle>
+          <CategoryDonut
+            buckets={summary.byCategory}
+            centerLabel="active"
+            centerValue={formatDuration(summary.activeMs)}
+          />
+        </Card>
+        <Card>
+          <CardTitle>Top projects</CardTitle>
+          <TopProjects projects={summary.topProjects} />
+        </Card>
+      </div>
+
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-        <Stat label="Tracked" value={formatDuration(totalMs)} />
-        <Stat label="Active" value={formatDuration(activeMs)} />
-        <Stat label="Idle" value={formatDuration(idleMs)} />
-        <Stat label="Events" value={String(eventCount)} />
+        <Stat label="Tracked" value={formatDuration(summary.totalMs)} />
+        <Stat label="Active" value={formatDuration(summary.activeMs)} />
+        <Stat label="Idle" value={formatDuration(summary.idleMs)} />
+        <Stat label="Events" value={String(summary.eventCount)} />
       </div>
     </div>
   );

@@ -77,7 +77,7 @@ NEEDS  P2-E -> P2-A : /api/v1/org/summary returns per-category daily buckets
 2026-06-27  P1-A.CONTRACT  done  event shape frozen on master (fd490f2); P1-B/C/D unblocked on contract; routes pending P1-A.5
 2026-06-27  P1-A.4  doing  encrypted sqlite store; app-level AES-256-GCM on title/url/meta, key in OS keychain (decided: modernc.org/sqlite has no native encryption)
 2026-06-27  P1-A.4  done   store(modernc sqlite,WAL)+crypto(AES-256-GCM)+keyring(zalando/OS+memory fake); Append idempotent, Query[from,to), encrypted-at-rest test; build/vet/test green; commit 056c458
-2026-06-27  P1-A.5  done   loopback API (internal/api) POST /events (single|array,max1000,idempotent), GET /timeline?from&to, GET /healthz; loopback-only guard; problem+json errors; cmd/cadence-agent wires keyring->store->server; live smoke verified (curl) + handler tests; routes documented in Variables block; commit <pending>
+2026-06-27  P1-A.5  done   loopback API (internal/api) POST /events (single|array,max1000,idempotent), GET /timeline?from&to, GET /healthz; loopback-only guard; problem+json errors; cmd/cadence-agent wires keyring->store->server; live smoke verified (curl) + handler tests; routes documented in Variables block; commit 3986143
 ```
 
 ---

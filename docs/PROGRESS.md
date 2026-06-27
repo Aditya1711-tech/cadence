@@ -5,7 +5,7 @@
 > `[!]` blocked. Every `[x]` must be committed. Resuming sessions read this file
 > and the Build Log only — never the whole codebase.
 
-Last updated: 2026-06-27  ·  by stream: P1-A
+Last updated: 2026-06-27  ·  by stream: P1-C
 
 ---
 
@@ -50,8 +50,8 @@ NEEDS  P2-E -> P2-A : /api/v1/org/summary returns per-category daily buckets
 - [ ] P1-B.7 verify events + classification
 
 ### P1-C — Chrome extension
-- [ ] P1-C.1 explore MV3 focus-time tracking
-- [ ] P1-C.2 explore privacy default (domain-only)
+- [x] P1-C.1 explore MV3 focus-time tracking
+- [x] P1-C.2 explore privacy default (domain-only)
 - [ ] P1-C.3 track active tab + focus duration
 - [ ] P1-C.4 emit events per policy
 - [ ] P1-C.5 map dev domains to categories
@@ -85,6 +85,10 @@ NEEDS  P2-E -> P2-A : /api/v1/org/summary returns per-category daily buckets
 2026-06-27  P1-A.10 done   resource budget: idle CPU measured 0.0% over 24s (typeperf), private working set ~3MB / RSS 13-57MB (tasklist); collector polls every 5s with batched HTTP flush, store WAL+single-writer; well under <2% idle target. NOTE: measured on Windows; authoritative mac/linux numbers come from the soak; commit 7069ac6
 2026-06-27  P1-A.11 block  24h soak requires BOTH founders' machines (macOS + Linux) running 14 continuous days per phase exit criteria; cannot be performed in this Windows dev session. HANDOFF to a mac/linux session.
 2026-06-27  P1-A     note   HANDOFF for mac/linux sessions: implement+verify collector backends (platform_darwin.go NSWorkspace+Accessibility+CGEventSource; platform_linux.go X11 EWMH+XScreenSaver / Wayland app-only); runtime-verify P1-A.9 service install; capture authoritative P1-A.10 idle-CPU on mac/linux; run P1-A.11 soak. All other P1-A code is done, tested on Windows, and on master.
+2026-06-27  P1-C.1  doing  exploring MV3 SW lifecycle + active-tab focus tracking
+2026-06-27  P1-C.2  doing  exploring domain-only privacy default + redaction honoring
+2026-06-27  P1-C.1  done   findings in ext-chrome/docs/01-requirements-exploration.md; commit 1028b0a
+2026-06-27  P1-C.2  done   domain-only default + daemon-owns-redaction; commit 1028b0a
 ```
 
 ---

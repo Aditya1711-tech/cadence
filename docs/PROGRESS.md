@@ -5,7 +5,7 @@
 > `[!]` blocked. Every `[x]` must be committed. Resuming sessions read this file
 > and the Build Log only — never the whole codebase.
 
-Last updated: 2026-06-28  ·  by stream: P2-D
+Last updated: 2026-06-28  ·  by stream: P2-E
 
 ---
 
@@ -43,6 +43,20 @@ NEEDS  P2-D -> P2-A : V2 migration for installation->org mapping. New org-scoped
 RESOLVED  P2-E -> P2-A : /org/summary returns org_by_day[] (per-day per-category
           buckets) + org_totals_by_category[] + by_member[] (privacy-bounded).
           Shape = com.cadence.query.Summaries.OrgSummary. (P2-A.5)
+NEEDS  P2-E -> P2-A : an admin-guarded endpoint to SET orgs.privacy_level (e.g.
+          PATCH /api/v1/org/settings {privacyLevel}). Today the level is only
+          READABLE (AuthResponse.org.privacyLevel); P2-E.4 privacy-level control
+          needs to change it. INTERIM: privacy control is read-only in the UI.
+NEEDS  P2-E -> P2-A (+depends P2-D) : commit activity in /org/summary (e.g. a
+          commits block w/ per-member/per-day commit counts from source:github
+          events). Not in OrgSummary today; P2-D github ingestion is unbuilt.
+          INTERIM: the P2-E.5 commit panel renders a "GitHub not connected" state.
+NOTE   P2-E -> spine : env correction — phase-doc P2-E var NEXT_PUBLIC_API_BASE
+          is build-time-inlined by Next and can't be set per deploy. The admin app
+          talks to the backend SERVER-SIDE via a BFF proxy (no CORS change needed),
+          so it uses the RUNTIME var CADENCE_API_BASE (default http://localhost:8080).
+          Same correction P1-D made for the agent base. Please update the P2-E
+          "Variables to set" block in docs/PHASE-2-cloud-org.md.
 RESOLVED  (P1 member_id gap) P2-A : canonical member_id = members.id, assigned by
           the backend at INVITE-ACCEPT / DEVICE-ENROLL. The daemon learns it via
           POST /api/v1/auth/device/enroll {code} -> {member_id, access, refresh};
@@ -258,8 +272,8 @@ protocol §8 the phase gate is not satisfied until those pass.
 - [x] P2-D.5 respect toggle (full_diff stats-enrichment API call stubbed; default mode complete)
 
 ### P2-E — org admin dashboard
-- [ ] P2-E.1 explore admin needs (trust-first)
-- [ ] P2-E.2 onboarding flow UX
+- [x] P2-E.1 explore admin needs (trust-first)
+- [x] P2-E.2 onboarding flow UX
 - [ ] P2-E.3 auth pages
 - [ ] P2-E.4 roster + invites + privacy control
 - [ ] P2-E.5 team summary (heatmap/tokens/commits)
@@ -319,6 +333,8 @@ protocol §8 the phase gate is not satisfied until those pass.
 2026-06-28  P2-D.5  done   privacy toggle respected: per-install GithubMode; commit_messages_only stores subject+sha+repo+branch (no paths, no API call); full_diff branch wired (mapper derives changed_files COUNT from push file-path array lengths — paths never stored) + GithubStatsEnricher hook; StubGithubStatsEnricher degrades safely (logs, messages-only) — live additions/deletions API call (App-JWT RS256 + contents:read) is the documented TODO per user decision. Code/patch NEVER stored. commit 803540a
 2026-06-28  P2-D     note   BUILD/VERIFY: `cd backend && ./gradlew build` GREEN (JDK21 toolchain; 38 unit tests pass; cadence-backend.jar built). Beans instantiate without V2 table (queries lazy), so app still starts. NOT verified here (dev-box limit, same as P2-A.10): live webhook->Postgres insert + RLS + the two-SecurityFilterChain context start — all need (a) P2-A V2 github_installations migration [NEEDS filed] and (b) a Docker host. HANDOFF: after V2 lands, run on a Docker host and add a github integrationTest mirroring E2EIngestQueryIT.
 2026-06-28  P2-D     note   SPINE FOLLOW-UP (phase gate §8): deploy/.env.example (/deploy is spine-owned) lacks GITHUB_APP_ID/GITHUB_APP_PRIVATE_KEY/GITHUB_WEBHOOK_SECRET/GITHUB_DEFAULT_MODE — already in docs/ENV-VARIABLES.md + PHASE-2 P2-D block; please add to .env.example + LOCAL-SETUP GitHub-App registration steps (webhook URL = <base>/api/v1/github/webhook). full_diff also needs GITHUB_APP_ID + GITHUB_APP_PRIVATE_KEY once enrichment is implemented.
+2026-06-27  P2-E.1  done   admin-needs exploration (trust-first): grounded the UI in the as-built P2-A contract (auth surface, /org/members, /org/summary{orgTotalsByCategory,orgByDay heatmap,byMember rollups+tokens}); see+do list, privacy-as-trust-banner rules; drilldown is the byMember slice (privacy-bounded by construction, no per-event detail); web/admin/docs/01-requirements-exploration.md
+2026-06-27  P2-E.2  done   onboarding-flow UX: register->set-privacy->invite(targeted/open link)->member-accept->install+device-code->data-appears; <30min/zero-DB exit criterion; ARCH decision = BFF proxy + httpOnly-cookie session (no CORS change vs spine SecurityConfig; tokens off JS; invisible refresh); self-contained Next app under /web/admin (no P2 web spine exists). 3 gaps filed as NEEDS (set-privacy endpoint, commit-activity field, env var). STOP: present findings to user before P2-E.3 implementation.
 ```
 
 ---

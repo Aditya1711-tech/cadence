@@ -76,6 +76,16 @@ NOTE   P2-B -> P1-A (operator-approved) : P2-B makes a MINIMAL touch to
           agent/cmd/cadence-agent/main.go — a thin call into /agent/sync to start the
           loop when enrolled + `enroll`/`status` subcommands. Only P1-A-owned file
           P2-B edits; logic stays in /agent/sync.
+CONFIRMED P2-F -> P2-A : payload {"event_id","ts_start"} + row org_id is SUFFICIENT
+          (it is exactly the events PK + the RLS key). No extension requested. (P2-F.1)
+NEEDS  P2-F -> P2-A : extend ingest to ALSO enqueue a categorize job when an event
+          arrives with category == 'other' (not only null). The device rule
+          classifier defaults unmatched events to 'other', so a null-only trigger
+          never surfaces the low-confidence events P2-F exists to handle. One-line
+          change to IngestService.enqueueCategorize's guard (category null OR
+          'other'). NON-BLOCKING for P2-F: the worker re-checks category on claim
+          and only calls the LLM for null/other, so it is correct under either
+          trigger; this NEEDS only changes throughput. Rationale: P2-F.1 doc.
 NOTE   P2-A -> ALL  : auth contract for clients — Authorization: Bearer <access JWT>
           (HS256, 60m); refresh via POST /auth/refresh {refresh_token} (rotating;
           reuse revokes the family). Ingest=POST /api/v1/ingest/events (array<=1000,
@@ -281,8 +291,8 @@ protocol §8 the phase gate is not satisfied until those pass.
 - [x] P2-E.7 install instructions page
 
 ### P2-F — categorisation worker
-- [ ] P2-F.1 explore escalation rules
-- [ ] P2-F.2 prompt design (fixed enum out)
+- [x] P2-F.1 explore escalation rules
+- [x] P2-F.2 prompt design (fixed enum out)
 - [ ] P2-F.3 worker claims jobs + LLM call + write-back
 - [ ] P2-F.4 pattern cache
 - [ ] P2-F.5 cost guardrails + metrics
@@ -341,6 +351,9 @@ protocol §8 the phase gate is not satisfied until those pass.
 2026-06-28  P2-E.6  done   member drilldown /members/[id]: consumes the by_member slice of /org/summary (no new endpoint) -> privacy-bounded BY CONSTRUCTION (category mix + token spend only; never titles/urls/per-event). Header identity from /org/members (limit 1000); reuses CategoryTotals(title) + TokenPanel([rollup]); aggregate_only -> "per-member detail hidden" notice; no-rollup -> "no activity"; back-to-roster + range picker. lint+build GREEN. commit 9d4d242
 2026-06-28  P2-E.7  done   install page: BFF /api/me/device-codes (deviceLabel as query, not body, per backend); DeviceCodeCard mints one-time enrollment code (copy + expiry) resolving the P1 member_id gap; 3 numbered steps (install agent / enroll device / editor+browser exts) w/ CodeBlock copy. lint+build GREEN (19 routes). Variables block filled. P2-E STREAM COMPLETE (all build tasks [x]); UI-level verification only — full live e2e needs a running backend+DB (Docker), same dev-box limit as P2-A.10. commit 31e6f10
 2026-06-28  P2-E     note   STREAM COMPLETE at UI/build level: /web/admin Next 14 app, lint+build GREEN, all P2-E.1-.7 [x]. NOT live-verified end-to-end (no running Spring backend + Timescale on this Windows box; same limit as P2-A.10 / P1-A mac-linux). HANDOFF: run `cd web/admin && npm ci && npm run build` then point CADENCE_API_BASE at a live backend and walk register->invite->accept->install->overview. 3 interim NEEDS still open (set-privacy endpoint, commit-activity field, env-var doc update) — UI degrades honestly until P2-A/P2-D resolve them.
+2026-06-27  P2-F     note   START P2-F (worker -> com.cadence.worker pkg). Rebased on origin/master (up to date, e5af75a). Read P2-A as-built: IngestService enqueues categorize jobs ONLY for category==null; device rule classifier (P1-A.7) defaults unmatched->'other', so null-only never surfaces low-confidence events. job_queue payload {event_id,ts_start}+row org_id confirmed sufficient.
+2026-06-27  P2-F.1  done   escalation rules: escalate when category null OR 'other' (other = rule classifier's explicit give-up); never re-categorise the 7 specific cats. Worker re-checks on claim so trigger is throughput-only, not correctness. Cost layers: device rules + pattern cache + per-org daily cap + claim batching. Failure=best-effort (default other, never block). Filed NEEDS P2-F->P2-A (ingest enqueue 'other' too). doc backend/docs/exploration/P2-F.1-escalation-rules.md; commit 9d01431
+2026-06-27  P2-F.2  done   prompt/model: official Anthropic Java SDK, claude-haiku-4-5 (CADENCE_CATEGORIZE_MODEL), no thinking/effort (Haiku lacks effort). Force fixed 8-enum via strict tool use/structured output (+ defensive other fallback). System prompt = stable cacheable role+category defs; user msg = structured signals (source/app/title/url/project/is_idle/duration) mirroring device ruleset. Cache key source|app|norm-title|url-host. Privacy: reads raw (store-raw/redact-on-read), notes app/title/url leave box for LLM. doc backend/docs/exploration/P2-F.2-prompt-design.md; commit 9d01431
 ```
 
 ---

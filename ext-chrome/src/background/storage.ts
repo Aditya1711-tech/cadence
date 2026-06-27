@@ -41,7 +41,11 @@ export async function getPendingSpans(): Promise<FocusSpan[]> {
   return (got[STORAGE_KEYS.pendingSpans] as FocusSpan[] | undefined) ?? [];
 }
 
-/** Clears flushed spans. Used by the flush path once events are accepted. */
-export async function clearPendingSpans(): Promise<void> {
-  await chrome.storage.local.remove(STORAGE_KEYS.pendingSpans);
+/** Replaces the pending-spans buffer (e.g. with the un-flushed remainder). */
+export async function setPendingSpans(spans: FocusSpan[]): Promise<void> {
+  if (spans.length === 0) {
+    await chrome.storage.local.remove(STORAGE_KEYS.pendingSpans);
+    return;
+  }
+  await chrome.storage.local.set({ [STORAGE_KEYS.pendingSpans]: spans });
 }

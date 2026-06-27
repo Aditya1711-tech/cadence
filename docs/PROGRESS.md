@@ -22,8 +22,8 @@ Last updated: 2026-06-27  ·  by stream: P1-C
 (none yet — add cross-stream requests here, e.g.)
 NEEDS  P2-E -> P2-A : /api/v1/org/summary returns per-category daily buckets
 
-NEEDS  P1-C -> P1-A : P1-A.5 local POST route + port for source:"chrome" events; confirm CORS for 127.0.0.1 from a SW or that host_permissions http://127.0.0.1/* suffices (blocks P1-C.4)
-NEEDS  P1-C -> P1-A : expose install-time member_id via the local API so the chrome collector shares one identity (contract requires member_id) (blocks P1-C.4)
+RESOLVED  P1-C -> P1-A : local route + CORS — P1-A.5 ships POST /events on 127.0.0.1:47821 (default); manifest host_permissions http://127.0.0.1/* grants the SW cross-origin access, so no server CORS needed. (verified by reading agent/internal/api/server.go)
+OPEN      P1-C -> P1-A : expose install-time member_id via the local API so all collectors share one identity — NOT provided by P1-A.5 (server stores whatever member_id the event carries). INTERIM: chrome self-generates a stable uuid in storage; should adopt the daemon's id once exposed. (also affects P1-B)
 ```
 
 ---
@@ -56,7 +56,7 @@ NEEDS  P1-C -> P1-A : expose install-time member_id via the local API so the chr
 - [x] P1-C.1 explore MV3 focus-time tracking
 - [x] P1-C.2 explore privacy default (domain-only)
 - [x] P1-C.3 track active tab + focus duration
-- [!] P1-C.4 emit events per policy  (blocked on P1-A.5 local route + member_id)
+- [x] P1-C.4 emit events per policy
 - [x] P1-C.5 map dev domains to categories
 - [ ] P1-C.6 popup UI
 - [ ] P1-C.7 verify events + redaction
@@ -97,6 +97,8 @@ NEEDS  P1-C -> P1-A : expose install-time member_id via the local API so the chr
 2026-06-27  P1-C.4  block  emit blocked on P1-A.5 local route + member_id handshake; NEEDS lines filed in coordination block
 2026-06-27  P1-C.5  doing  dev-domain -> category map (github/meet/zoom/slack/so/docs/ai tools)
 2026-06-27  P1-C.5  done   contract.ts Category mirror + categorize(); host/suffix/docs rules; 15-case behavioral check green, build green; commit 844f195
+2026-06-27  P1-C.4  doing  rebased onto P1-A.5 (port 47821, POST /events); emit module: span->Event, domain_only/full policy, interim member_id, flush w/ graceful degradation
+2026-06-27  P1-C.4  done   emit.ts span->Event (domain_only origin+null-title / full), interim member_id, batched flush to 127.0.0.1:47821 w/ graceful degradation; wired to heartbeat+startup; shaping Validate-clean via ported-rules check + build green; live daemon round-trip needs running Go agent -> P1-C.7/founder machines; commit <pending>
 ```
 
 ---

@@ -29,6 +29,9 @@ export const HEARTBEAT_PERIOD_MINUTES = 1;
  */
 export const MIN_SPAN_MS = 1_000;
 
+/** Most events accepted in one POST /events call (matches the daemon's §6 cap). */
+export const MAX_BATCH = 1000;
+
 /** chrome.storage keys. `session` lives in in-memory session storage (cleared
  *  on browser restart); accumulated spans live in local storage so they survive
  *  SW termination until flushed to the daemon (P1-C.4). */

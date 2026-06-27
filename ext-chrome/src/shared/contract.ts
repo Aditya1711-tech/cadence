@@ -28,3 +28,31 @@ export const CATEGORIES: readonly Category[] = [
   "idle",
   "other",
 ];
+
+/** Collector identifier. The Chrome collector always emits "chrome". */
+export type Source = "os" | "vscode" | "chrome" | "token" | "github";
+
+/**
+ * One event in the frozen wire shape (mirror of the Go Event struct). Every key
+ * is ALWAYS present; a value the collector can't fill is null, never omitted.
+ * The daemon validates that duration_ms === (ts_end - ts_start) in whole ms, so
+ * timestamps must be emitted at millisecond precision (Date#toISOString is).
+ */
+export interface Event {
+  event_id: string;
+  schema_ver: number;
+  source: Source;
+  member_id: string;
+  /** RFC3339 UTC, millisecond precision. */
+  ts_start: string;
+  /** RFC3339 UTC, millisecond precision. */
+  ts_end: string;
+  duration_ms: number;
+  app: string;
+  title: string | null;
+  url: string | null;
+  project: string | null;
+  category: Category | null;
+  is_idle: boolean;
+  meta: Record<string, unknown>;
+}

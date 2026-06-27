@@ -16,6 +16,7 @@ import {
   onIdleChanged,
   reconcile,
 } from "./focusTracker.js";
+import { flush } from "./emit.js";
 
 const now = (): number => Date.now();
 
@@ -39,6 +40,7 @@ async function init(): Promise<void> {
   state.idle = await chrome.idle.queryState(IDLE_DETECTION_SECONDS);
   await setLiveState(state);
   await reconcile(now());
+  await flush(); // ship anything left over from a previous session
 }
 
 chrome.runtime.onInstalled.addListener(() => serialize(init));
@@ -66,7 +68,12 @@ chrome.idle.onStateChanged.addListener((idleState) => {
   serialize(() => onIdleChanged(idleState, now()));
 });
 
-// Heartbeat: checkpoint long sessions + flush (flush lands in P1-C.4).
+// Heartbeat: checkpoint long sessions, then flush completed spans to the daemon.
 chrome.alarms.onAlarm.addListener((alarm) => {
-  if (alarm.name === HEARTBEAT_ALARM) serialize(() => onHeartbeat(now()));
+  if (alarm.name === HEARTBEAT_ALARM) {
+    serialize(async () => {
+      await onHeartbeat(now());
+      await flush();
+    });
+  }
 });

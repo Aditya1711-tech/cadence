@@ -5,7 +5,7 @@
 > `[!]` blocked. Every `[x]` must be committed. Resuming sessions read this file
 > and the Build Log only — never the whole codebase.
 
-Last updated: _set on each edit_  ·  by stream: _____
+Last updated: 2026-06-27  ·  by stream: P1-A
 
 ---
 
@@ -28,8 +28,8 @@ NEEDS  P2-E -> P2-A : /api/v1/org/summary returns per-category daily buckets
 ## Phase 1 — Foundation
 
 ### P1-A — agent core / store / contract / classifier  (SPINE)
-- [ ] P1-A.1 explore active-window detection per OS
-- [ ] P1-A.2 explore idle detection approach
+- [x] P1-A.1 explore active-window detection per OS
+- [x] P1-A.2 explore idle detection approach
 - [ ] P1-A.3 Event Contract structs + JSON  ← ticks P1-A.CONTRACT
 - [ ] P1-A.4 encrypted SQLite store + APIs
 - [ ] P1-A.5 local 127.0.0.1 collector/read routes
@@ -71,6 +71,8 @@ NEEDS  P2-E -> P2-A : /api/v1/org/summary returns per-category daily buckets
 **Build Log — Phase 1**
 ```
 (append newest at bottom: date  task-id  state  note; commit <sha>)
+2026-06-27  P1-A.1  done   active-window detection survey (mac/linux/win); app-name-first, title opt-in via Accessibility (never Screen Recording); see agent/docs/exploration/P1-A.1; commit 490a7d2
+2026-06-27  P1-A.2  done   idle detection survey; 5s poll of OS idle counter, 300s threshold, meeting-aware suppression, backdated idle start; see agent/docs/exploration/P1-A.2; commit 490a7d2
 ```
 
 ---

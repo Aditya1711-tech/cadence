@@ -35,6 +35,19 @@ NOTE   P2-A -> P2-F : job_queue categorize PAYLOAD shape = {"event_id":"<uuid>",
           "ts_start":"<rfc3339>"}; job_queue row carries org_id. Worker claims via
           SELECT ... FOR UPDATE SKIP LOCKED, reads the event under org context,
           writes back category. Confirm/extend before P2-F.3.
+DECISION P2-B (open) : track "un-synced" given P2-B owns only /agent/sync/ and must
+          NOT edit store.go (P1-A). store.go exposes only Append/Query(by ts_start)/
+          Count — no synced_at, no append-order cursor. Option A: self-contained
+          sidecar (sync.db: synced(event_id PK) + low-water-mark watermark; diff
+          store.Query window) — zero cross-stream dep, fully parallel, correct for
+          realtime collectors; only gap = late inserts with old ts (no Phase-2
+          source). Option B: NEEDS P1-A to add events.synced_at + Unsynced/MarkSynced
+          (cleanest; §7.1 anticipates it) — but reopens a done stream + blocks P2-B.
+          RECOMMEND Option A; revisit B when P1-A next touches the store. Awaiting op.
+NOTE   P2-B -> P1-A : enabling cloud sync needs a minimal entrypoint hook in
+          agent/cmd/cadence-agent/main.go (start sync loop when enrolled; `enroll`/
+          `status` subcommands). That is the only P1-A-owned file P2-B would touch;
+          kept to a thin call into /agent/sync. Flag if P1-A must own this instead.
 NOTE   P2-A -> ALL  : auth contract for clients — Authorization: Bearer <access JWT>
           (HS256, 60m); refresh via POST /auth/refresh {refresh_token} (rotating;
           reuse revokes the family). Ingest=POST /api/v1/ingest/events (array<=1000,
@@ -209,8 +222,8 @@ protocol §8 the phase gate is not satisfied until those pass.
 - [~] P2-A.10 e2e privacy-level verification (Testcontainers e2e AUTHORED + compiles; running it needs a Docker host — not available on this Windows dev box; HANDOFF)
 
 ### P2-B — sync engine
-- [ ] P2-B.1 explore sync strategy
-- [ ] P2-B.2 explore device enrollment
+- [x] P2-B.1 explore sync strategy
+- [x] P2-B.2 explore device enrollment
 - [ ] P2-B.3 outbound sync loop (filtered, batched)
 - [ ] P2-B.4 keychain token storage + refresh
 - [ ] P2-B.5 enrollment via invite link
@@ -264,6 +277,9 @@ protocol §8 the phase gate is not satisfied until those pass.
 2026-06-27  P2-A     note   BUILD/VERIFY status: `cd backend && ./gradlew build` GREEN (JDK21 auto-provisioned via foojay toolchain; 11 unit tests pass; bootJar built). NOT verified here: Flyway apply against real Timescale + integrationTest e2e (no Docker/Postgres on this box) — same dev-box limit as P1-A mac/linux. Run on a Docker host: `cd backend && ./gradlew integrationTest`.
 2026-06-27  P2-A     note   ARCH DECISION (affects Wave-1): single Spring Boot module, package-by-feature under backend/src/main/java/com/cadence/<feature> (ingest, query, auth, security, tenancy, mail, common). §9's per-stream /backend/<dir> map to packages: worker->com.cadence.worker (P2-F), token->com.cadence.token (P2-C), github->com.cadence.github (P2-D). One deployable jar on one EC2 box (§4). Streams add their own package; avoid editing others'.
 2026-06-27  P2-A     note   MERGE: P1 docs-audit landed on master (76a0a13, cb97aa7); rebased stream/p2-a-backend onto master (only PROGRESS "Last updated" conflicted -> P2-A); build-log shas refreshed (exploration ef77ce4, spine d09468e). Audit confirmed ZERO change to §5/§6/§7 cloud contracts (adds Phase-1 local-store §7.1 only). ff-merge to master next; not pushed (leaked-PAT, see memory).
+2026-06-27  P2-B.1  done   sync-strategy exploration: periodic pull-filter-push loop (CADENCE_SYNC_INTERVAL_SEC=300, immediate first run), stored event.Event already marshals to EventDto snake_case (no transform), ingest idempotent on event_id (double-guarded), reactive 401->refresh, exp-backoff+jitter on 5xx/429, offline-durable (watermark never advances past unsent). No client-side org-privacy filter (daemon has no org privacy signal; server enforces on read; local redaction already applied at store time). agent/sync/docs/exploration/P2-B.1-sync-strategy.md; commit <pending>
+2026-06-27  P2-B.2  done   device-enrollment exploration: short-code flow (web mint POST /me/device-codes -> paste into daemon -> POST /auth/device/enroll {code} -> {memberId,access,refresh}); secrets in OS keychain (reuse keyring.Keyring; accounts member-id/access-token/refresh-token); reactive rotating refresh (reuse revokes family -> serialize); adopt canonical member_id. agent/sync/docs/exploration/P2-B.2-device-enrollment.md; commit <pending>
+2026-06-27  P2-B     note   STOP per kickoff: exploration done, showing findings BEFORE P2-B.3 implementation. ONE open decision flagged to operator (see DECISION line in Coordination block): how P2-B tracks "un-synced" given it owns only /agent/sync/ and must not edit store.go (P1-A). Recommendation: Option A self-contained sidecar. Secondary: minimal main.go entrypoint wiring touches one P1-A-owned file.
 ```
 
 ---

@@ -90,7 +90,7 @@ NEEDS  P2-E -> P2-A : /api/v1/org/summary returns per-category daily buckets
 2026-06-27  P1-C.1  done   findings in ext-chrome/docs/01-requirements-exploration.md; commit c289a9a
 2026-06-27  P1-C.2  done   domain-only default + daemon-owns-redaction; commit c289a9a
 2026-06-27  P1-C.3  doing  scaffold MV3 ext + focus state machine (tabs/windows/idle/alarms)
-2026-06-27  P1-C.3  done   MV3 scaffold + focus state machine (focusLogic/focusTracker/index); npm ci && npm run build green; in-browser runtime verification deferred to P1-C.7; commit <pending>
+2026-06-27  P1-C.3  done   MV3 scaffold + focus state machine (focusLogic/focusTracker/index); npm ci && npm run build green; in-browser runtime verification deferred to P1-C.7; commit a1a1e4d
 ```
 
 ---

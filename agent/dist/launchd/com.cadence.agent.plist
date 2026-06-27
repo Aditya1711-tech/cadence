@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  Cadence local agent — macOS per-user LaunchAgent.
+  Installed to ~/Library/LaunchAgents/com.cadence.agent.plist by install.sh,
+  which substitutes the __PLACEHOLDERS__. Runs at login; KeepAlive restarts it
+  on crash. Background ProcessType keeps it low-priority so it stays under the
+  idle-CPU budget (see P1-A.10).
+-->
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>com.cadence.agent</string>
+
+  <key>ProgramArguments</key>
+  <array>
+    <string>__BINARY__</string>
+  </array>
+
+  <key>RunAtLoad</key>
+  <true/>
+
+  <key>KeepAlive</key>
+  <true/>
+
+  <key>ProcessType</key>
+  <string>Background</string>
+
+  <key>LowPriorityIO</key>
+  <true/>
+
+  <key>EnvironmentVariables</key>
+  <dict>
+    <key>CADENCE_AGENT_PORT</key>
+    <string>47821</string>
+  </dict>
+
+  <key>StandardOutPath</key>
+  <string>__LOGDIR__/cadence-agent.log</string>
+
+  <key>StandardErrorPath</key>
+  <string>__LOGDIR__/cadence-agent.err.log</string>
+</dict>
+</plist>

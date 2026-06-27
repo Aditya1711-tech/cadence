@@ -1,0 +1,24 @@
+# Cadence local agent — Linux systemd *user* unit.
+# Installed to ~/.config/systemd/user/cadence-agent.service by install.sh.
+# Enable with `systemctl --user enable --now cadence-agent`; run
+# `loginctl enable-linger "$USER"` so it survives logout (P1-A.9).
+[Unit]
+Description=Cadence local activity agent
+Documentation=https://github.com/Aditya1711-tech/cadence
+After=default.target
+
+[Service]
+Type=simple
+ExecStart=__BINARY__
+Restart=on-failure
+RestartSec=5
+Environment=CADENCE_AGENT_PORT=47821
+
+# Stay under the idle-CPU/memory budget (P1-A.10): low priority + caps.
+Nice=10
+CPUWeight=20
+MemoryMax=200M
+TasksMax=64
+
+[Install]
+WantedBy=default.target

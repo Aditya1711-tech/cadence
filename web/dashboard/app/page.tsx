@@ -3,14 +3,15 @@ import { Card, CardTitle } from "@/components/ui/card";
 import { Ribbon } from "@/components/ribbon";
 import { CategoryDonut } from "@/components/category-donut";
 import { TopProjects } from "@/components/top-projects";
+import { FocusCard } from "@/components/focus-card";
 import { formatDuration } from "@/lib/time";
 import type { DaySummary } from "@/lib/summary";
 import type { Event } from "@/lib/contract/event";
 
 // Server component: reads today's local activity and renders the glanceable
-// view. Ribbon (P1-D.4), category donut + projects (P1-D.5), and focus score
-// (P1-D.6) are layered into this page in their own tasks; this commit (P1-D.3)
-// establishes the read path and the hero/totals.
+// view — hero deep-work stat, timeline ribbon (P1-D.4), focus score (P1-D.6),
+// category breakdown + top projects (P1-D.5), and totals. Friendly offline /
+// empty states are refined in P1-D.7.
 export const dynamic = "force-dynamic";
 
 export default async function TodayPage() {
@@ -77,6 +78,11 @@ function DayView({
       <Card>
         <CardTitle>Timeline</CardTitle>
         <Ribbon events={events} />
+      </Card>
+
+      <Card>
+        <CardTitle>Focus</CardTitle>
+        <FocusCard focus={summary.focus} />
       </Card>
 
       <div className="grid gap-6 lg:grid-cols-2">

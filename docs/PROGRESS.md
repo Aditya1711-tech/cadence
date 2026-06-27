@@ -77,7 +77,7 @@ NOTE   P1-D : Phase-1 dashboard is a self-contained Next.js app rooted at
 - [x] P1-D.3 Next.js dashboard reading local route
 - [x] P1-D.4 daily timeline ribbon
 - [x] P1-D.5 category breakdown + top projects
-- [ ] P1-D.6 focus score
+- [x] P1-D.6 focus score
 - [ ] P1-D.7 empty/offline states
 - [ ] P1-D.8 verify with real local data
 
@@ -102,6 +102,8 @@ NOTE   P1-D : Phase-1 dashboard is a self-contained Next.js app rooted at
 2026-06-27  P1-D.5  doing  category donut + top projects
 2026-06-27  P1-D.5  done   SVG category donut + legend (%s sum 100) + ranked project bars (null->Unassigned); lint+build green, smoke-verified 7 arcs; commit 38958f2
 2026-06-27  P1-D.2  done   read contract frozen by P1-A.5; reconciled HttpAgentClient to bare array (no envelope/pagination), proxy returns array, mock matches ts_start-in-range; NEEDS resolved; resolution table in REQUIREMENTS-P1-D.md; lint+build green; commit 7e2a349
+2026-06-27  P1-D.6  doing  focus score card
+2026-06-27  P1-D.6  done   FocusCard: 0-100 score + band (Focused/Mixed/Fragmented) + plain-language read (deep blocks/longest/switches); lint+build green, smoke-verified; commit 7275b56
 ```
 
 ---

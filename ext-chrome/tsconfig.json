@@ -16,5 +16,7 @@
     "esModuleInterop": true,
     "forceConsistentCasingInFileNames": true
   },
-  "include": ["src"]
+  "include": ["src"],
+  "//": "Tests import node: builtins and run via esbuild+node --test, not tsc.",
+  "exclude": ["src/**/*.test.ts"]
 }

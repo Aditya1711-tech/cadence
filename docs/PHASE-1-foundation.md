@@ -141,9 +141,14 @@ cadence.redactPaths=true
 
 ### Variables to set
 ```
-# Loaded as an unpacked extension in dev; configured via popup:
-cadence.agentPort=<matches CADENCE_AGENT_PORT>
-cadence.urlPrivacy=domain_only   # domain_only | full
+# Build: cd ext-chrome && npm ci && npm run build  -> load ext-chrome/dist/ unpacked.
+# Configured via the popup; stored in chrome.storage.local:
+cadence.agentPort=47821          # matches CADENCE_AGENT_PORT (agent default); override in popup
+cadence.urlPrivacy=domain_only   # domain_only (default: origin-only url + null title) | full
+# Manifest permissions: tabs, idle, alarms, storage + host_permissions http://127.0.0.1/*
+# member_id: interim self-generated stable uuid in storage, pending a daemon-shared
+#   id (see the OPEN NEEDS line in PROGRESS.md — also affects P1-B).
+# Manual on-machine E2E checklist: ext-chrome/docs/02-verification.md
 ```
 
 ---

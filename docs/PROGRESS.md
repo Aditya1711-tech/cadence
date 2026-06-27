@@ -90,13 +90,13 @@ NEEDS  P1-C -> P1-A : expose install-time member_id via the local API so the chr
 2026-06-27  P1-A     note   HANDOFF for mac/linux sessions: implement+verify collector backends (platform_darwin.go NSWorkspace+Accessibility+CGEventSource; platform_linux.go X11 EWMH+XScreenSaver / Wayland app-only); runtime-verify P1-A.9 service install; capture authoritative P1-A.10 idle-CPU on mac/linux; run P1-A.11 soak. All other P1-A code is done, tested on Windows, and on master.
 2026-06-27  P1-C.1  doing  exploring MV3 SW lifecycle + active-tab focus tracking
 2026-06-27  P1-C.2  doing  exploring domain-only privacy default + redaction honoring
-2026-06-27  P1-C.1  done   findings in ext-chrome/docs/01-requirements-exploration.md; commit c289a9a
-2026-06-27  P1-C.2  done   domain-only default + daemon-owns-redaction; commit c289a9a
+2026-06-27  P1-C.1  done   findings in ext-chrome/docs/01-requirements-exploration.md; commit 0a8ece6
+2026-06-27  P1-C.2  done   domain-only default + daemon-owns-redaction; commit 0a8ece6
 2026-06-27  P1-C.3  doing  scaffold MV3 ext + focus state machine (tabs/windows/idle/alarms)
-2026-06-27  P1-C.3  done   MV3 scaffold + focus state machine (focusLogic/focusTracker/index); npm ci && npm run build green; in-browser runtime verification deferred to P1-C.7; commit a1a1e4d
+2026-06-27  P1-C.3  done   MV3 scaffold + focus state machine (focusLogic/focusTracker/index); npm ci && npm run build green; in-browser runtime verification deferred to P1-C.7; commit daf46db
 2026-06-27  P1-C.4  block  emit blocked on P1-A.5 local route + member_id handshake; NEEDS lines filed in coordination block
 2026-06-27  P1-C.5  doing  dev-domain -> category map (github/meet/zoom/slack/so/docs/ai tools)
-2026-06-27  P1-C.5  done   contract.ts Category mirror + categorize(); host/suffix/docs rules; 15-case behavioral check green, build green; commit eb2aafb
+2026-06-27  P1-C.5  done   contract.ts Category mirror + categorize(); host/suffix/docs rules; 15-case behavioral check green, build green; commit 844f195
 ```
 
 ---

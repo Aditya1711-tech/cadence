@@ -73,7 +73,7 @@ NEEDS  P2-E -> P2-A : /api/v1/org/summary returns per-category daily buckets
 (append newest at bottom: date  task-id  state  note; commit <sha>)
 2026-06-27  P1-A.1  done   active-window detection survey (mac/linux/win); app-name-first, title opt-in via Accessibility (never Screen Recording); see agent/docs/exploration/P1-A.1; commit 490a7d2
 2026-06-27  P1-A.2  done   idle detection survey; 5s poll of OS idle counter, 300s threshold, meeting-aware suppression, backdated idle start; see agent/docs/exploration/P1-A.2; commit 490a7d2
-2026-06-27  P1-A.3  done   Event Contract Go structs+JSON (agent/internal/event), golden sample, validation, uuid-v4; go build/vet/test green; ticks P1-A.CONTRACT; commit d7f018b
+2026-06-27  P1-A.3  done   Event Contract Go structs+JSON (agent/internal/event), golden sample, validation, uuid-v4; go build/vet/test green; ticks P1-A.CONTRACT; commit dc270d3
 ```
 
 ---

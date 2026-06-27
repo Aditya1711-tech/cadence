@@ -71,8 +71,8 @@ NOTE   P1-D : env var correction — the phase-doc P1-D var
 - [!] P1-A.11 24h soak test both machines (BLOCKED: needs founders' macOS+Linux machines, 14 days)
 
 ### P1-B — VSCode extension
-- [ ] P1-B.1 explore which editor events reflect real time
-- [ ] P1-B.2 explore project/lang capture + redaction
+- [x] P1-B.1 explore which editor events reflect real time
+- [x] P1-B.2 explore project/lang capture + redaction
 - [x] P1-B.3 track active file/lang/workspace
 - [x] P1-B.4 emit events to daemon (debounced)
 - [x] P1-B.5 graceful degradation when daemon down
@@ -146,13 +146,13 @@ NOTE   P1-D : env var correction — the phase-doc P1-D var
 2026-06-27  P1-D.7  doing  friendly offline/empty/error/loading states + live polling
 2026-06-27  P1-D.7  done   StatePanel (offline w/ start cmd+retry, empty, error, loading skeleton) + LiveDay client polls /api/timeline every 60s; fixed env: runtime CADENCE_AGENT_BASE/USE_MOCK (NEXT_PUBLIC is build-inlined), default port 47821, .env.example; smoke-verified offline(503)/mock; lint+build green; commit cb00cf4
 2026-06-27  P1-D.8  done   e2e against REAL daemon: built+ran cadence-agent (temp store, :47821), POSTed 14 events (idempotent), dashboard rendered real data via proxy (hero/ribbon/focus/donut/projects); offline->503 friendly state; both-machines dogfood noted as phase-exit; see VERIFICATION-P1-D.8.md; commit 11a99ed
-2026-06-27  P1-B.1  done   editor-event survey + focused-session model; ext-vscode/docs/requirements-exploration.md; commit <pending>
-2026-06-27  P1-B.2  done   project (workspace folder) / lang (languageId) capture + path-redaction approach; same doc; commit <pending>
-2026-06-27  P1-B.3  done   focused-session tracker (src/session.ts): window-focus gate + edit/selection/scroll/debug heartbeats, 300s idle aligned w/ P1-A.2 + backdated close; vscode wiring (src/extension.ts); commit <pending>
-2026-06-27  P1-B.4  done   emitter.ts mapSegment->Event Contract (source=vscode, title=basename+project, meta.lang, is_idle=false, category=null) + DaemonEmitter 30s/focus-loss debounced batch POST to /events; identity.ts provisional member_id; agentPort/redactPaths settings; commit <pending>
-2026-06-27  P1-B.5  done   graceful degradation: retain-on-failure + timer retry, bounded queue (drop-oldest, logged), snapshot/restore backlog across editor restarts via globalState (idempotent re-send); commit <pending>
-2026-06-27  P1-B.6  done   settings cadence.enabled off-switch + pause/resume/toggle commands + status-bar toggle (pause flushes, never discards); commit <pending>
-2026-06-27  P1-B.7  done   verified: 22 node:test units + LIVE e2e vs real daemon incl. P1-A.7 classifier -> category deep_work, correct project/lang/is_idle, idempotency; ext-vscode/docs/verification-P1-B.7.md; P1-B stream COMPLETE; commit <pending>
+2026-06-27  P1-B.1  done   editor-event survey + focused-session model; ext-vscode/docs/requirements-exploration.md; commit 2ebe52b
+2026-06-27  P1-B.2  done   project (workspace folder) / lang (languageId) capture + path-redaction approach; same doc; commit 2ebe52b
+2026-06-27  P1-B.3  done   focused-session tracker (src/session.ts): window-focus gate + edit/selection/scroll/debug heartbeats, 300s idle aligned w/ P1-A.2 + backdated close; vscode wiring (src/extension.ts); commit 2ebe52b
+2026-06-27  P1-B.4  done   emitter.ts mapSegment->Event Contract (source=vscode, title=basename+project, meta.lang, is_idle=false, category=null) + DaemonEmitter 30s/focus-loss debounced batch POST to /events; identity.ts provisional member_id; agentPort/redactPaths settings; commit 2ebe52b
+2026-06-27  P1-B.5  done   graceful degradation: retain-on-failure + timer retry, bounded queue (drop-oldest, logged), snapshot/restore backlog across editor restarts via globalState (idempotent re-send); commit 2ebe52b
+2026-06-27  P1-B.6  done   settings cadence.enabled off-switch + pause/resume/toggle commands + status-bar toggle (pause flushes, never discards); commit 2ebe52b
+2026-06-27  P1-B.7  done   verified: 22 node:test units + LIVE e2e vs real daemon incl. P1-A.7 classifier -> category deep_work, correct project/lang/is_idle, idempotency; ext-vscode/docs/verification-P1-B.7.md; P1-B stream COMPLETE; commit 2ebe52b
 ```
 
 ---

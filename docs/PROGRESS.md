@@ -21,6 +21,9 @@ Last updated: 2026-06-27  ·  by stream: P1-C
 ```
 (none yet — add cross-stream requests here, e.g.)
 NEEDS  P2-E -> P2-A : /api/v1/org/summary returns per-category daily buckets
+
+NEEDS  P1-C -> P1-A : P1-A.5 local POST route + port for source:"chrome" events; confirm CORS for 127.0.0.1 from a SW or that host_permissions http://127.0.0.1/* suffices (blocks P1-C.4)
+NEEDS  P1-C -> P1-A : expose install-time member_id via the local API so the chrome collector shares one identity (contract requires member_id) (blocks P1-C.4)
 ```
 
 ---
@@ -53,8 +56,8 @@ NEEDS  P2-E -> P2-A : /api/v1/org/summary returns per-category daily buckets
 - [x] P1-C.1 explore MV3 focus-time tracking
 - [x] P1-C.2 explore privacy default (domain-only)
 - [x] P1-C.3 track active tab + focus duration
-- [ ] P1-C.4 emit events per policy
-- [ ] P1-C.5 map dev domains to categories
+- [!] P1-C.4 emit events per policy  (blocked on P1-A.5 local route + member_id)
+- [x] P1-C.5 map dev domains to categories
 - [ ] P1-C.6 popup UI
 - [ ] P1-C.7 verify events + redaction
 
@@ -91,6 +94,9 @@ NEEDS  P2-E -> P2-A : /api/v1/org/summary returns per-category daily buckets
 2026-06-27  P1-C.2  done   domain-only default + daemon-owns-redaction; commit c289a9a
 2026-06-27  P1-C.3  doing  scaffold MV3 ext + focus state machine (tabs/windows/idle/alarms)
 2026-06-27  P1-C.3  done   MV3 scaffold + focus state machine (focusLogic/focusTracker/index); npm ci && npm run build green; in-browser runtime verification deferred to P1-C.7; commit a1a1e4d
+2026-06-27  P1-C.4  block  emit blocked on P1-A.5 local route + member_id handshake; NEEDS lines filed in coordination block
+2026-06-27  P1-C.5  doing  dev-domain -> category map (github/meet/zoom/slack/so/docs/ai tools)
+2026-06-27  P1-C.5  done   contract.ts Category mirror + categorize(); host/suffix/docs rules; 15-case behavioral check green, build green; commit <pending>
 ```
 
 ---

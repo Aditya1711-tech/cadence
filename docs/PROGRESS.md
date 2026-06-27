@@ -90,19 +90,19 @@ OPEN      P1-C -> P1-A : expose install-time member_id via the local API so all 
 2026-06-27  P1-A     note   HANDOFF for mac/linux sessions: implement+verify collector backends (platform_darwin.go NSWorkspace+Accessibility+CGEventSource; platform_linux.go X11 EWMH+XScreenSaver / Wayland app-only); runtime-verify P1-A.9 service install; capture authoritative P1-A.10 idle-CPU on mac/linux; run P1-A.11 soak. All other P1-A code is done, tested on Windows, and on master.
 2026-06-27  P1-C.1  doing  exploring MV3 SW lifecycle + active-tab focus tracking
 2026-06-27  P1-C.2  doing  exploring domain-only privacy default + redaction honoring
-2026-06-27  P1-C.1  done   findings in ext-chrome/docs/01-requirements-exploration.md; commit 2584ad0
-2026-06-27  P1-C.2  done   domain-only default + daemon-owns-redaction; commit 2584ad0
+2026-06-27  P1-C.1  done   findings in ext-chrome/docs/01-requirements-exploration.md; commit be835e0
+2026-06-27  P1-C.2  done   domain-only default + daemon-owns-redaction; commit be835e0
 2026-06-27  P1-C.3  doing  scaffold MV3 ext + focus state machine (tabs/windows/idle/alarms)
-2026-06-27  P1-C.3  done   MV3 scaffold + focus state machine (focusLogic/focusTracker/index); npm ci && npm run build green; in-browser runtime verification deferred to P1-C.7; commit 351cb26
+2026-06-27  P1-C.3  done   MV3 scaffold + focus state machine (focusLogic/focusTracker/index); npm ci && npm run build green; in-browser runtime verification deferred to P1-C.7; commit 0c5c4e4
 2026-06-27  P1-C.4  block  emit blocked on P1-A.5 local route + member_id handshake; NEEDS lines filed in coordination block
 2026-06-27  P1-C.5  doing  dev-domain -> category map (github/meet/zoom/slack/so/docs/ai tools)
-2026-06-27  P1-C.5  done   contract.ts Category mirror + categorize(); host/suffix/docs rules; 15-case behavioral check green, build green; commit 4e50c52
+2026-06-27  P1-C.5  done   contract.ts Category mirror + categorize(); host/suffix/docs rules; 15-case behavioral check green, build green; commit 15f6600
 2026-06-27  P1-C.4  doing  rebased onto P1-A.5 (port 47821, POST /events); emit module: span->Event, domain_only/full policy, interim member_id, flush w/ graceful degradation
-2026-06-27  P1-C.4  done   emit.ts span->Event (domain_only origin+null-title / full), interim member_id, batched flush to 127.0.0.1:47821 w/ graceful degradation; wired to heartbeat+startup; shaping Validate-clean via ported-rules check + build green; live daemon round-trip needs running Go agent -> P1-C.7/founder machines; commit 17dfa6d
+2026-06-27  P1-C.4  done   emit.ts span->Event (domain_only origin+null-title / full), interim member_id, batched flush to 127.0.0.1:47821 w/ graceful degradation; wired to heartbeat+startup; shaping Validate-clean via ported-rules check + build green; live daemon round-trip needs running Go agent -> P1-C.7/founder machines; commit f485dba
 2026-06-27  P1-C.6  doing  popup: today's top sites (via daemon /timeline), pause toggle, privacy toggle; paused wired into tracker
-2026-06-27  P1-C.6  done   popup.html/css + popup.ts (pause toggle, urlPrivacy select, today's top sites via daemon /timeline + offline state); paused honored in reconcile + storage.onChanged for prompt effect; sites helpers verified (15 asserts), build green; in-browser render -> P1-C.7; commit 11de80a
+2026-06-27  P1-C.6  done   popup.html/css + popup.ts (pause toggle, urlPrivacy select, today's top sites via daemon /timeline + offline state); paused honored in reconcile + storage.onChanged for prompt effect; sites helpers verified (15 asserts), build green; in-browser render -> P1-C.7; commit b8602a3
 2026-06-27  P1-C.7  doing  formalize verification: node:test suites (focusLogic/categorize/emit/sites) + manual on-machine E2E doc; fill Variables block
-2026-06-27  P1-C.7  done   npm test green (33 cases): spanToEvent Validate-clean + domain_only redaction verified, categorize, focus state machine, popup aggregation; manual live E2E checklist (ext-chrome/docs/02-verification.md) for founder box (no Go here); Variables block filled. P1-C stream COMPLETE. commit 0e77b77
+2026-06-27  P1-C.7  done   npm test green (33 cases): spanToEvent Validate-clean + domain_only redaction verified, categorize, focus state machine, popup aggregation; manual live E2E checklist (ext-chrome/docs/02-verification.md) for founder box (no Go here); Variables block filled. P1-C stream COMPLETE. commit a2daef2
 ```
 
 ---

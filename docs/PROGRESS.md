@@ -11,7 +11,7 @@ Last updated: 2026-06-27  ·  by stream: P1-A
 
 ## Contract checkpoints (gates for launching parallel waves)
 
-- [ ] `P1-A.CONTRACT` — Event Contract + local routes frozen in code (unblocks P1-B/C/D)
+- [x] `P1-A.CONTRACT` — Event Contract frozen in code (Go structs + JSON, golden sample, tests green); local routes land in P1-A.5 (unblocks P1-B/C/D)
 - [ ] `P2-A.CONTRACT` — ingest + query + schema frozen (unblocks P2-B/C/D/E/F)
 - [ ] `P3-A.CONTRACT` — aggregated-fact shape frozen (unblocks P3-B/C/E)
 
@@ -30,7 +30,7 @@ NEEDS  P2-E -> P2-A : /api/v1/org/summary returns per-category daily buckets
 ### P1-A — agent core / store / contract / classifier  (SPINE)
 - [x] P1-A.1 explore active-window detection per OS
 - [x] P1-A.2 explore idle detection approach
-- [ ] P1-A.3 Event Contract structs + JSON  ← ticks P1-A.CONTRACT
+- [x] P1-A.3 Event Contract structs + JSON  ← ticks P1-A.CONTRACT
 - [ ] P1-A.4 encrypted SQLite store + APIs
 - [ ] P1-A.5 local 127.0.0.1 collector/read routes
 - [ ] P1-A.6 active-window + idle collector
@@ -73,6 +73,7 @@ NEEDS  P2-E -> P2-A : /api/v1/org/summary returns per-category daily buckets
 (append newest at bottom: date  task-id  state  note; commit <sha>)
 2026-06-27  P1-A.1  done   active-window detection survey (mac/linux/win); app-name-first, title opt-in via Accessibility (never Screen Recording); see agent/docs/exploration/P1-A.1; commit 490a7d2
 2026-06-27  P1-A.2  done   idle detection survey; 5s poll of OS idle counter, 300s threshold, meeting-aware suppression, backdated idle start; see agent/docs/exploration/P1-A.2; commit 490a7d2
+2026-06-27  P1-A.3  done   Event Contract Go structs+JSON (agent/internal/event), golden sample, validation, uuid-v4; go build/vet/test green; ticks P1-A.CONTRACT; commit d7f018b
 ```
 
 ---

@@ -5,7 +5,7 @@
 > `[!]` blocked. Every `[x]` must be committed. Resuming sessions read this file
 > and the Build Log only — never the whole codebase.
 
-Last updated: 2026-06-27  ·  by stream: P1-C
+Last updated: 2026-06-27  ·  by stream: P1-C / P1-D (master merge)
 
 ---
 
@@ -24,6 +24,26 @@ NEEDS  P2-E -> P2-A : /api/v1/org/summary returns per-category daily buckets
 
 RESOLVED  P1-C -> P1-A : local route + CORS — P1-A.5 ships POST /events on 127.0.0.1:47821 (default); manifest host_permissions http://127.0.0.1/* grants the SW cross-origin access, so no server CORS needed. (verified by reading agent/internal/api/server.go)
 OPEN      P1-C -> P1-A : expose install-time member_id via the local API so all collectors share one identity — NOT provided by P1-A.5 (server stores whatever member_id the event carries). INTERIM: chrome self-generates a stable uuid in storage; should adopt the daemon's id once exposed. (also affects P1-B)
+RESOLVED  P1-D -> P1-A : local read contract frozen by P1-A.5 (commit 3986143).
+       GET /timeline returns a bare event array (no envelope/pagination),
+       problem+json errors, loopback-only (no auth), port 47821. Dashboard
+       reads server-side via its own /api/timeline proxy (no CORS needed) and
+       computes rollups from /timeline (no /summary shipped). Client
+       reconciled. Resolution table in web/dashboard/docs/REQUIREMENTS-P1-D.md.
+
+NOTE   P1-D : Phase-1 dashboard is a self-contained Next.js app rooted at
+       /web/dashboard/ (no web-spine stream exists in Phase 1). The shared
+       /web shell refactor for /web/admin (P2-E) + /web/insights (P3) is
+       deferred to the P2 web spine. Actual check cmd: cd web/dashboard &&
+       npm ci && npm run lint && npm run build.
+
+NOTE   P1-D : env var correction — the phase-doc P1-D var
+       NEXT_PUBLIC_CADENCE_AGENT_BASE is build-time-inlined by Next, so it
+       can't be set per machine. The dashboard reads the daemon SERVER-SIDE
+       (proxy), so it uses the RUNTIME var CADENCE_AGENT_BASE (default
+       http://127.0.0.1:47821) + CADENCE_USE_MOCK. See web/dashboard/.env.example.
+       Spine: please update the P1-D "Variables to set" block in
+       docs/PHASE-1-foundation.md accordingly.
 ```
 
 ---
@@ -62,14 +82,14 @@ OPEN      P1-C -> P1-A : expose install-time member_id via the local API so all 
 - [x] P1-C.7 verify events + redaction
 
 ### P1-D — personal dashboard (local)
-- [ ] P1-D.1 explore day-one dashboard content
-- [ ] P1-D.2 agree local read contract with P1-A
-- [ ] P1-D.3 Next.js dashboard reading local route
-- [ ] P1-D.4 daily timeline ribbon
-- [ ] P1-D.5 category breakdown + top projects
-- [ ] P1-D.6 focus score
-- [ ] P1-D.7 empty/offline states
-- [ ] P1-D.8 verify with real local data
+- [x] P1-D.1 explore day-one dashboard content
+- [x] P1-D.2 agree local read contract with P1-A (frozen by P1-A.5; client reconciled)
+- [x] P1-D.3 Next.js dashboard reading local route
+- [x] P1-D.4 daily timeline ribbon
+- [x] P1-D.5 category breakdown + top projects
+- [x] P1-D.6 focus score
+- [x] P1-D.7 empty/offline states
+- [x] P1-D.8 verify with real local data (single machine; both-machines dogfood is phase-exit work)
 
 **Build Log — Phase 1**
 ```
@@ -103,6 +123,22 @@ OPEN      P1-C -> P1-A : expose install-time member_id via the local API so all 
 2026-06-27  P1-C.6  done   popup.html/css + popup.ts (pause toggle, urlPrivacy select, today's top sites via daemon /timeline + offline state); paused honored in reconcile + storage.onChanged for prompt effect; sites helpers verified (15 asserts), build green; in-browser render -> P1-C.7; commit b8602a3
 2026-06-27  P1-C.7  doing  formalize verification: node:test suites (focusLogic/categorize/emit/sites) + manual on-machine E2E doc; fill Variables block
 2026-06-27  P1-C.7  done   npm test green (33 cases): spanToEvent Validate-clean + domain_only redaction verified, categorize, focus state machine, popup aggregation; manual live E2E checklist (ext-chrome/docs/02-verification.md) for founder box (no Go here); Variables block filled. P1-C stream COMPLETE. commit a2daef2
+2026-06-27  P1-D.1  doing  exploring day-one dashboard content
+2026-06-27  P1-D.2  doing  drafting proposed local read contract for P1-A
+2026-06-27  P1-D.1  done   day-one content + focus-score def + states; see REQUIREMENTS-P1-D.md; commit cc31479
+2026-06-27  P1-D.2  block  read contract proposed; awaiting P1-A to freeze (NEEDS filed); blocks P1-D.3+
+2026-06-27  P1-D.3  doing  scaffold self-contained Next.js app under web/dashboard
+2026-06-27  P1-D.3  done   Next.js app + TS Event Contract mirror + agent client (http/mock) + /api/timeline proxy (RFC7807) + summary engine; reads via mock, lint+build green, smoke-tested; commit 7ac6b4a
+2026-06-27  P1-D.4  doing  timeline ribbon layout + component
+2026-06-27  P1-D.4  done   cropped hourly ribbon, category-colored blocks, native tooltips, hour ticks; shared color palette; lint+build green, smoke-verified 14 blocks/8 colors; commit 7897fbb
+2026-06-27  P1-D.5  doing  category donut + top projects
+2026-06-27  P1-D.5  done   SVG category donut + legend (%s sum 100) + ranked project bars (null->Unassigned); lint+build green, smoke-verified 7 arcs; commit 38958f2
+2026-06-27  P1-D.2  done   read contract frozen by P1-A.5; reconciled HttpAgentClient to bare array (no envelope/pagination), proxy returns array, mock matches ts_start-in-range; NEEDS resolved; resolution table in REQUIREMENTS-P1-D.md; lint+build green; commit 7e2a349
+2026-06-27  P1-D.6  doing  focus score card
+2026-06-27  P1-D.6  done   FocusCard: 0-100 score + band (Focused/Mixed/Fragmented) + plain-language read (deep blocks/longest/switches); lint+build green, smoke-verified; commit 7275b56
+2026-06-27  P1-D.7  doing  friendly offline/empty/error/loading states + live polling
+2026-06-27  P1-D.7  done   StatePanel (offline w/ start cmd+retry, empty, error, loading skeleton) + LiveDay client polls /api/timeline every 60s; fixed env: runtime CADENCE_AGENT_BASE/USE_MOCK (NEXT_PUBLIC is build-inlined), default port 47821, .env.example; smoke-verified offline(503)/mock; lint+build green; commit cb00cf4
+2026-06-27  P1-D.8  done   e2e against REAL daemon: built+ran cadence-agent (temp store, :47821), POSTed 14 events (idempotent), dashboard rendered real data via proxy (hero/ribbon/focus/donut/projects); offline->503 friendly state; both-machines dogfood noted as phase-exit; see VERIFICATION-P1-D.8.md; commit 11a99ed
 ```
 
 ---

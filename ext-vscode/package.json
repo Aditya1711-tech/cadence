@@ -1,0 +1,75 @@
+{
+  "name": "cadence-vscode",
+  "displayName": "Cadence",
+  "description": "Privacy-first activity and focused-time tracking for VS Code.",
+  "version": "0.0.1",
+  "publisher": "cadence",
+  "private": true,
+  "license": "UNLICENSED",
+  "engines": {
+    "vscode": "^1.85.0",
+    "node": ">=18"
+  },
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "cadence.pauseTracking",
+        "title": "Cadence: Pause Tracking"
+      },
+      {
+        "command": "cadence.resumeTracking",
+        "title": "Cadence: Resume Tracking"
+      },
+      {
+        "command": "cadence.toggleTracking",
+        "title": "Cadence: Toggle Tracking"
+      }
+    ],
+    "configuration": {
+      "title": "Cadence",
+      "properties": {
+        "cadence.enabled": {
+          "type": "boolean",
+          "default": true,
+          "markdownDescription": "Master switch for Cadence activity tracking. Takes effect on the next window reload."
+        },
+        "cadence.agentPort": {
+          "type": "number",
+          "default": 47821,
+          "minimum": 1,
+          "maximum": 65535,
+          "markdownDescription": "Loopback port of the local Cadence daemon that events are POSTed to. Must match `CADENCE_AGENT_PORT`."
+        },
+        "cadence.redactPaths": {
+          "type": "boolean",
+          "default": true,
+          "markdownDescription": "When enabled, event titles carry only the file basename and project name — never an absolute path."
+        },
+        "cadence.idleThresholdSec": {
+          "type": "number",
+          "default": 300,
+          "minimum": 1,
+          "markdownDescription": "Seconds of no editor interaction before the current focus session is treated as idle. Matches the OS collector default (P1-A.2)."
+        }
+      }
+    }
+  },
+  "scripts": {
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "pretest": "npm run compile",
+    "test": "node --test \"out/test/**/*.test.js\""
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.0",
+    "@types/vscode": "^1.85.0",
+    "typescript": "^5.4.0"
+  }
+}

@@ -108,10 +108,13 @@ CADENCE_REDACT_PATH=          # optional JSON {"patterns":[regex,...]}; matching
 
 ### Variables to set
 ```
-# VSCode settings contributed (documented in package.json):
-cadence.enabled=true
-cadence.agentPort=<matches CADENCE_AGENT_PORT>
-cadence.redactPaths=true
+# VSCode settings contributed (see ext-vscode/package.json):
+cadence.enabled=true             # master on/off (reload to apply)
+cadence.agentPort=47821          # must match CADENCE_AGENT_PORT (daemon default 47821)
+cadence.redactPaths=true         # titles carry basename + project only, never abs path
+cadence.idleThresholdSec=300     # focus-session idle cutoff; matches OS collector (P1-A.2)
+# Commands: cadence.pauseTracking / resumeTracking / toggleTracking (+ status-bar toggle)
+# Local member_id: provisional per-install uuid in globalState (see OPEN NEEDS to P1-A)
 ```
 
 ---

@@ -5,7 +5,7 @@
 > `[!]` blocked. Every `[x]` must be committed. Resuming sessions read this file
 > and the Build Log only — never the whole codebase.
 
-Last updated: 2026-06-27  ·  by stream: P1-C / P1-D (master merge)
+Last updated: 2026-06-27  ·  by stream: P1-B
 
 ---
 
@@ -24,6 +24,13 @@ NEEDS  P2-E -> P2-A : /api/v1/org/summary returns per-category daily buckets
 
 RESOLVED  P1-C -> P1-A : local route + CORS — P1-A.5 ships POST /events on 127.0.0.1:47821 (default); manifest host_permissions http://127.0.0.1/* grants the SW cross-origin access, so no server CORS needed. (verified by reading agent/internal/api/server.go)
 OPEN      P1-C -> P1-A : expose install-time member_id via the local API so all collectors share one identity — NOT provided by P1-A.5 (server stores whatever member_id the event carries). INTERIM: chrome self-generates a stable uuid in storage; should adopt the daemon's id once exposed. (also affects P1-B)
+OPEN      P1-B -> P1-A : same member_id gap as P1-C above. INTERIM: vscode ext
+          self-generates a stable uuid in globalState (identity.ts). Re-sends are
+          idempotent. Both collectors should adopt a canonical daemon identity
+          before Phase-2 sync correlates them.
+RESOLVED  P1-B -> P1-A : P1-A.7 classifier — vscode events (category null, url
+          null, is_idle false) classify deep_work via the editor-source rule;
+          verified live end-to-end (ext-vscode/docs/verification-P1-B.7.md).
 RESOLVED  P1-D -> P1-A : local read contract frozen by P1-A.5 (commit 3986143).
        GET /timeline returns a bare event array (no envelope/pagination),
        problem+json errors, loopback-only (no auth), port 47821. Dashboard
@@ -66,11 +73,11 @@ NOTE   P1-D : env var correction — the phase-doc P1-D var
 ### P1-B — VSCode extension
 - [ ] P1-B.1 explore which editor events reflect real time
 - [ ] P1-B.2 explore project/lang capture + redaction
-- [ ] P1-B.3 track active file/lang/workspace
-- [ ] P1-B.4 emit events to daemon (debounced)
-- [ ] P1-B.5 graceful degradation when daemon down
-- [ ] P1-B.6 settings + pause command
-- [ ] P1-B.7 verify events + classification
+- [x] P1-B.3 track active file/lang/workspace
+- [x] P1-B.4 emit events to daemon (debounced)
+- [x] P1-B.5 graceful degradation when daemon down
+- [x] P1-B.6 settings + pause command
+- [x] P1-B.7 verify events + classification
 
 ### P1-C — Chrome extension
 - [x] P1-C.1 explore MV3 focus-time tracking
@@ -139,6 +146,13 @@ NOTE   P1-D : env var correction — the phase-doc P1-D var
 2026-06-27  P1-D.7  doing  friendly offline/empty/error/loading states + live polling
 2026-06-27  P1-D.7  done   StatePanel (offline w/ start cmd+retry, empty, error, loading skeleton) + LiveDay client polls /api/timeline every 60s; fixed env: runtime CADENCE_AGENT_BASE/USE_MOCK (NEXT_PUBLIC is build-inlined), default port 47821, .env.example; smoke-verified offline(503)/mock; lint+build green; commit cb00cf4
 2026-06-27  P1-D.8  done   e2e against REAL daemon: built+ran cadence-agent (temp store, :47821), POSTed 14 events (idempotent), dashboard rendered real data via proxy (hero/ribbon/focus/donut/projects); offline->503 friendly state; both-machines dogfood noted as phase-exit; see VERIFICATION-P1-D.8.md; commit 11a99ed
+2026-06-27  P1-B.1  done   editor-event survey + focused-session model; ext-vscode/docs/requirements-exploration.md; commit <pending>
+2026-06-27  P1-B.2  done   project (workspace folder) / lang (languageId) capture + path-redaction approach; same doc; commit <pending>
+2026-06-27  P1-B.3  done   focused-session tracker (src/session.ts): window-focus gate + edit/selection/scroll/debug heartbeats, 300s idle aligned w/ P1-A.2 + backdated close; vscode wiring (src/extension.ts); commit <pending>
+2026-06-27  P1-B.4  done   emitter.ts mapSegment->Event Contract (source=vscode, title=basename+project, meta.lang, is_idle=false, category=null) + DaemonEmitter 30s/focus-loss debounced batch POST to /events; identity.ts provisional member_id; agentPort/redactPaths settings; commit <pending>
+2026-06-27  P1-B.5  done   graceful degradation: retain-on-failure + timer retry, bounded queue (drop-oldest, logged), snapshot/restore backlog across editor restarts via globalState (idempotent re-send); commit <pending>
+2026-06-27  P1-B.6  done   settings cadence.enabled off-switch + pause/resume/toggle commands + status-bar toggle (pause flushes, never discards); commit <pending>
+2026-06-27  P1-B.7  done   verified: 22 node:test units + LIVE e2e vs real daemon incl. P1-A.7 classifier -> category deep_work, correct project/lang/is_idle, idempotency; ext-vscode/docs/verification-P1-B.7.md; P1-B stream COMPLETE; commit <pending>
 ```
 
 ---

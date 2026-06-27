@@ -178,8 +178,8 @@ protocol §8 the phase gate is not satisfied until those pass.
 ## Phase 2 — Cloud + Org
 
 ### P2-A — backend / auth / schema / contracts  (SPINE)
-- [ ] P2-A.1 explore multi-tenant model + onboarding UX
-- [ ] P2-A.2 explore JWT/invite flows
+- [x] P2-A.1 explore multi-tenant model + onboarding UX
+- [x] P2-A.2 explore JWT/invite flows
 - [ ] P2-A.3 Flyway V1 schema (orgs/members/teams/seats/events hypertable/job_queue/aggregates)
 - [ ] P2-A.4 ingest endpoint (idempotent, privacy-applied)  ← ticks P2-A.CONTRACT
 - [ ] P2-A.5 me/* + org/* query endpoints
@@ -230,6 +230,9 @@ protocol §8 the phase gate is not satisfied until those pass.
 **Build Log — Phase 2**
 ```
 (append newest at bottom)
+2026-06-27  P2-A.1  done   multi-tenant model + onboarding UX exploration: shared-schema + RLS by org_id; orgs/members/teams(+team_members join)/seats/invites/events-hypertable(+org_id,member_id; idempotency UNIQUE(event_id,ts_start))/job_queue(+org_id ext)/CAGGs(daily+hourly category, daily token); privacy store-at-level-on-ingest+enforce-on-read; canonical member_id=members.id resolves P1 gap; backend/docs/exploration/P2-A.1-multitenant-model.md; commit c7ec598
+2026-06-27  P2-A.2  done   auth/invite exploration: HS256 access JWT (60m) + opaque rotating refresh (reuse-detect family) + one_time_tokens (password_reset/device_enroll); endpoints register-org/login/refresh/logout/invite-accept/password-reset/device-enroll; RLS via set_config(app.current_org) per-request; backend/docs/exploration/P2-A.2-auth-invite-flow.md; commit c7ec598
+2026-06-27  P2-A     note   STOP per kickoff: data model + auth/invite flow presented to user for review BEFORE writing V1 migration (P2-A.3). 4 open decisions flagged (job_queue.org_id ext, privacy store-at-level, teams join table, login org disambiguation).
 ```
 
 ---

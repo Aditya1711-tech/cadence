@@ -60,7 +60,8 @@ P1-B, P1-C, P1-D simultaneously.
 ```
 CADENCE_AGENT_PORT=47821       # default loopback port (override via env)
 CADENCE_DB_PATH=               # default: <os.UserConfigDir>/cadence/cadence.db (override via env)
-CADENCE_KEYCHAIN_SERVICE=com.cadence.agent   # keychain service; account = "store-key"
+CADENCE_KEYCHAIN_SERVICE=com.cadence.agent   # keychain service; accounts "store-key", "member-id"
+CADENCE_MEMBER_ID=            # optional; else a uuid is generated and persisted in the keychain
 CADENCE_RULES_PATH=            # optional JSON classifier ruleset; scaffolded with
                               # the default on first run if missing. Unset = built-in default.
 CADENCE_REDACT_PATH=          # optional JSON {"patterns":[regex,...]}; matching titles/urls

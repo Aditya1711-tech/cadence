@@ -17,6 +17,8 @@ import (
 
 	"github.com/Aditya1711-tech/cadence/agent/internal/api"
 	"github.com/Aditya1711-tech/cadence/agent/internal/classify"
+	"github.com/Aditya1711-tech/cadence/agent/internal/collector"
+	"github.com/Aditya1711-tech/cadence/agent/internal/event"
 	"github.com/Aditya1711-tech/cadence/agent/internal/keyring"
 	"github.com/Aditya1711-tech/cadence/agent/internal/redact"
 	"github.com/Aditya1711-tech/cadence/agent/internal/store"
@@ -94,6 +96,8 @@ func run(log *slog.Logger) error {
 		}
 	}()
 
+	startCollector(ctx, log, service, addr)
+
 	select {
 	case err := <-errCh:
 		return err
@@ -134,6 +138,51 @@ func loadClassifier(log *slog.Logger) (*classify.Classifier, error) {
 	}
 	log.Info("loaded classifier ruleset", "path", path)
 	return c, nil
+}
+
+// startCollector starts the OS active-window + idle collector if this platform
+// has a backend, posting events to the local API. On unsupported platforms it
+// logs and returns, leaving the API serving without an OS source.
+func startCollector(ctx context.Context, log *slog.Logger, service, addr string) {
+	w, idle, err := collector.NewPlatform()
+	if err != nil {
+		log.Warn("OS collector unavailable on this platform; serving without it", "err", err)
+		return
+	}
+	memberID, err := loadOrCreateMemberID(keyring.OS{}, service)
+	if err != nil {
+		log.Error("could not resolve member id; OS collector disabled", "err", err)
+		return
+	}
+	sink := collector.NewHTTPSink("http://"+addr, nil)
+	col := collector.New(w, idle, sink, collector.Config{MemberID: memberID, Logger: log})
+	go func() {
+		log.Info("OS collector started", "member_id", memberID)
+		_ = col.Run(ctx)
+	}()
+}
+
+// loadOrCreateMemberID returns a stable local member identity, from
+// CADENCE_MEMBER_ID or a uuid persisted in the keychain on first run.
+func loadOrCreateMemberID(kr keyring.Keyring, service string) (string, error) {
+	if v := os.Getenv("CADENCE_MEMBER_ID"); v != "" {
+		return v, nil
+	}
+	id, err := kr.Get(service, "member-id")
+	if err == nil {
+		return id, nil
+	}
+	if !errors.Is(err, keyring.ErrNotFound) {
+		return "", err
+	}
+	newID, err := event.NewID()
+	if err != nil {
+		return "", err
+	}
+	if err := kr.Set(service, "member-id", newID); err != nil {
+		return "", err
+	}
+	return newID, nil
 }
 
 // loadRedactor builds the local redaction list. With CADENCE_REDACT_PATH set it

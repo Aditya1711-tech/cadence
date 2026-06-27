@@ -33,7 +33,7 @@ NEEDS  P2-E -> P2-A : /api/v1/org/summary returns per-category daily buckets
 - [x] P1-A.3 Event Contract structs + JSON  ← ticks P1-A.CONTRACT
 - [x] P1-A.4 encrypted SQLite store + APIs
 - [x] P1-A.5 local 127.0.0.1 collector/read routes
-- [ ] P1-A.6 active-window + idle collector
+- [x] P1-A.6 active-window + idle collector (Windows backend done; mac/linux scaffolded)
 - [x] P1-A.7 rule-based classifier + default ruleset
 - [x] P1-A.8 local redaction list (hashing)
 - [ ] P1-A.9 background service (launchd/systemd)
@@ -80,6 +80,7 @@ NEEDS  P2-E -> P2-A : /api/v1/org/summary returns per-category daily buckets
 2026-06-27  P1-A.5  done   loopback API (internal/api) POST /events (single|array,max1000,idempotent), GET /timeline?from&to, GET /healthz; loopback-only guard; problem+json errors; cmd/cadence-agent wires keyring->store->server; live smoke verified (curl) + handler tests; routes documented in Variables block; commit 3986143
 2026-06-27  P1-A.7  done   rule classifier (internal/classify): ordered regex ruleset app/title/url/source/is_idle -> category, first-match-wins; shipped default ruleset (editors->deep_work, meetings, comms, code_review, ai_assisted, research, idle); user-editable JSON via CADENCE_RULES_PATH (scaffolded on first run); wired into POST /events to fill null categories; build/vet/test green, cross-compiles mac/linux; commit 6bc5187
 2026-06-27  P1-A.8  done   redaction list (internal/redact): user regex -> SHA-256 hash of matching title/url before store (stable token, groupable); user JSON via CADENCE_REDACT_PATH (scaffold empty), default off; refactored api.New to Options{Classifier,Redactor,Logger}; runs after classify so categories use real values; tests + ingest redaction test green; commit acd7225
+2026-06-27  P1-A.6  done   OS collector (internal/collector): OS-agnostic segmentation loop (window/idle transitions, back-dated idle boundary, meeting idle-suppression), HTTP sink -> local /events; Windows backend (user32/kernel32, no CGO) runtime-tested (reads real fg window+idle); macOS/Linux backends scaffolded behind build tags (cross-compile-checked, NOT runtime-verified here - see memory); member-id persisted in keychain; collector started best-effort in main; loop unit tests + win integration test green; commit <pending>
 ```
 
 ---

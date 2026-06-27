@@ -5,7 +5,7 @@
 > `[!]` blocked. Every `[x]` must be committed. Resuming sessions read this file
 > and the Build Log only — never the whole codebase.
 
-Last updated: 2026-06-27  ·  by stream: P1-A
+Last updated: 2026-06-27  ·  by stream: P1-D
 
 ---
 
@@ -21,6 +21,14 @@ Last updated: 2026-06-27  ·  by stream: P1-A
 ```
 (none yet — add cross-stream requests here, e.g.)
 NEEDS  P2-E -> P2-A : /api/v1/org/summary returns per-category daily buckets
+
+NEEDS  P1-D -> P1-A : freeze local read contract — (1) GET /timeline returns full
+       Event Contract objects + cursor pagination; (2) provide GET /summary
+       rollups (preferred) or confirm dashboard computes from /timeline;
+       (3) CORS for localhost dev origin OR confirm same-origin proxy;
+       (4) confirm no auth on 127.0.0.1 loopback; (5) polling vs SSE for live
+       refresh; (6) RFC 7807 errors on local route. See
+       web/dashboard/docs/REQUIREMENTS-P1-D.md (P1-D.2). Blocks P1-D.3+.
 ```
 
 ---
@@ -59,8 +67,8 @@ NEEDS  P2-E -> P2-A : /api/v1/org/summary returns per-category daily buckets
 - [ ] P1-C.7 verify events + redaction
 
 ### P1-D — personal dashboard (local)
-- [ ] P1-D.1 explore day-one dashboard content
-- [ ] P1-D.2 agree local read contract with P1-A
+- [x] P1-D.1 explore day-one dashboard content
+- [!] P1-D.2 agree local read contract with P1-A (proposal drafted; awaiting P1-A — see NEEDS)
 - [ ] P1-D.3 Next.js dashboard reading local route
 - [ ] P1-D.4 daily timeline ribbon
 - [ ] P1-D.5 category breakdown + top projects
@@ -78,6 +86,10 @@ NEEDS  P2-E -> P2-A : /api/v1/org/summary returns per-category daily buckets
 2026-06-27  P1-A.4  doing  encrypted sqlite store; app-level AES-256-GCM on title/url/meta, key in OS keychain (decided: modernc.org/sqlite has no native encryption)
 2026-06-27  P1-A.4  done   store(modernc sqlite,WAL)+crypto(AES-256-GCM)+keyring(zalando/OS+memory fake); Append idempotent, Query[from,to), encrypted-at-rest test; build/vet/test green; commit 056c458
 2026-06-27  P1-A.5  done   loopback API (internal/api) POST /events (single|array,max1000,idempotent), GET /timeline?from&to, GET /healthz; loopback-only guard; problem+json errors; cmd/cadence-agent wires keyring->store->server; live smoke verified (curl) + handler tests; routes documented in Variables block; commit 3986143
+2026-06-27  P1-D.1  doing  exploring day-one dashboard content
+2026-06-27  P1-D.2  doing  drafting proposed local read contract for P1-A
+2026-06-27  P1-D.1  done   day-one content + focus-score def + states; see REQUIREMENTS-P1-D.md; commit cc31479
+2026-06-27  P1-D.2  block  read contract proposed; awaiting P1-A to freeze (NEEDS filed); blocks P1-D.3+
 ```
 
 ---

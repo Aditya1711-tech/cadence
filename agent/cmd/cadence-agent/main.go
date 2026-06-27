@@ -16,6 +16,7 @@ import (
 	"time"
 
 	"github.com/Aditya1711-tech/cadence/agent/internal/api"
+	"github.com/Aditya1711-tech/cadence/agent/internal/classify"
 	"github.com/Aditya1711-tech/cadence/agent/internal/keyring"
 	"github.com/Aditya1711-tech/cadence/agent/internal/store"
 )
@@ -58,10 +59,15 @@ func run(log *slog.Logger) error {
 	defer st.Close()
 	log.Info("local store ready", "path", dbPath)
 
+	classifier, err := loadClassifier(log)
+	if err != nil {
+		return err
+	}
+
 	addr := "127.0.0.1:" + port
 	srv := &http.Server{
 		Addr:              addr,
-		Handler:           api.New(st, log).Handler(),
+		Handler:           api.New(st, classifier, log).Handler(),
 		ReadHeaderTimeout: 5 * time.Second,
 		ReadTimeout:       15 * time.Second,
 		WriteTimeout:      15 * time.Second,
@@ -88,6 +94,37 @@ func run(log *slog.Logger) error {
 		defer cancel()
 		return srv.Shutdown(shutdownCtx)
 	}
+}
+
+// loadClassifier returns the event classifier. With CADENCE_RULES_PATH set, it
+// loads that JSON ruleset — scaffolding it with the built-in default on first
+// run if the file is missing, so users have something to edit. Unset uses the
+// built-in default ruleset.
+func loadClassifier(log *slog.Logger) (*classify.Classifier, error) {
+	path := os.Getenv("CADENCE_RULES_PATH")
+	if path == "" {
+		return classify.Default(), nil
+	}
+	if _, err := os.Stat(path); errors.Is(err, os.ErrNotExist) {
+		b, err := classify.DefaultRulesetJSON()
+		if err != nil {
+			return nil, err
+		}
+		if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {
+			return nil, err
+		}
+		if err := os.WriteFile(path, b, 0o600); err != nil {
+			return nil, err
+		}
+		log.Info("wrote default classifier ruleset (edit to customize)", "path", path)
+		return classify.Default(), nil
+	}
+	c, err := classify.Load(path)
+	if err != nil {
+		return nil, err
+	}
+	log.Info("loaded classifier ruleset", "path", path)
+	return c, nil
 }
 
 // resolveDBPath returns CADENCE_DB_PATH or a per-user default under the OS

@@ -22,6 +22,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/Aditya1711-tech/cadence/agent/internal/classify"
 	"github.com/Aditya1711-tech/cadence/agent/internal/event"
 )
 
@@ -44,16 +45,19 @@ type Store interface {
 
 // Server serves the local API over a Store.
 type Server struct {
-	store Store
-	log   *slog.Logger
+	store      Store
+	classifier *classify.Classifier // may be nil to disable on-ingest classification
+	log        *slog.Logger
 }
 
-// New builds a Server. If logger is nil, a discarding logger is used.
-func New(st Store, logger *slog.Logger) *Server {
+// New builds a Server. If logger is nil, a discarding logger is used. If
+// classifier is non-nil, events that arrive with a null category are classified
+// on ingest (a category the collector already set is left untouched).
+func New(st Store, classifier *classify.Classifier, logger *slog.Logger) *Server {
 	if logger == nil {
 		logger = slog.New(slog.NewTextHandler(io.Discard, nil))
 	}
-	return &Server{store: st, log: logger}
+	return &Server{store: st, classifier: classifier, log: logger}
 }
 
 // Handler returns the routed http.Handler, wrapped so only loopback peers are
@@ -110,6 +114,9 @@ func (s *Server) handlePostEvents(w http.ResponseWriter, r *http.Request) {
 
 	res := postEventsResult{Errors: []string{}}
 	for i := range events {
+		if s.classifier != nil && events[i].Category == nil {
+			s.classifier.Apply(&events[i])
+		}
 		if err := s.store.Append(&events[i]); err != nil {
 			res.Rejected++
 			res.Errors = append(res.Errors, "event "+strconv.Itoa(i)+": "+err.Error())

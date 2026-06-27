@@ -8,6 +8,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/Aditya1711-tech/cadence/agent/internal/classify"
 	"github.com/Aditya1711-tech/cadence/agent/internal/event"
 )
 
@@ -82,7 +83,7 @@ func sampleJSON(t *testing.T, id string, start time.Time) string {
 
 func TestPostSingleEvent(t *testing.T) {
 	fs := &fakeStore{}
-	h := New(fs, nil).Handler()
+	h := New(fs, nil, nil).Handler()
 	start := time.Date(2025, 6, 1, 9, 0, 0, 0, time.UTC)
 	rr := do(t, h, newReq(t, "POST", "/events", sampleJSON(t, "id-1", start)))
 	if rr.Code != http.StatusOK {
@@ -102,7 +103,7 @@ func TestPostSingleEvent(t *testing.T) {
 
 func TestPostArrayAndIdempotency(t *testing.T) {
 	fs := &fakeStore{}
-	h := New(fs, nil).Handler()
+	h := New(fs, nil, nil).Handler()
 	start := time.Date(2025, 6, 1, 9, 0, 0, 0, time.UTC)
 	body := "[" + sampleJSON(t, "id-1", start) + "," + sampleJSON(t, "id-1", start) + "," + sampleJSON(t, "id-2", start) + "]"
 	rr := do(t, h, newReq(t, "POST", "/events", body))
@@ -116,7 +117,7 @@ func TestPostArrayAndIdempotency(t *testing.T) {
 
 func TestPostRejectsInvalidEventButKeepsValid(t *testing.T) {
 	fs := &fakeStore{}
-	h := New(fs, nil).Handler()
+	h := New(fs, nil, nil).Handler()
 	start := time.Date(2025, 6, 1, 9, 0, 0, 0, time.UTC)
 	good := sampleJSON(t, "good", start)
 	bad := `{"event_id":"bad","schema_ver":1,"source":"not-a-source","member_id":"m1","ts_start":"2025-06-01T09:00:00Z","ts_end":"2025-06-01T09:00:00Z","duration_ms":0,"app":"x","title":null,"url":null,"project":null,"category":null,"is_idle":false,"meta":{}}`
@@ -134,8 +135,29 @@ func TestPostRejectsInvalidEventButKeepsValid(t *testing.T) {
 	}
 }
 
+func TestPostClassifiesNullCategoryOnIngest(t *testing.T) {
+	fs := &fakeStore{}
+	h := New(fs, classify.Default(), nil).Handler()
+	start := time.Date(2025, 6, 1, 9, 0, 0, 0, time.UTC)
+	// sampleJSON sets category deep_work; build a null-category vscode event instead.
+	e, _ := event.New(event.SourceVSCode, "m1", start, start.Add(time.Minute), "Visual Studio Code")
+	e.EventID = "null-cat"
+	b, _ := json.Marshal(e) // category is null
+	rr := do(t, h, newReq(t, "POST", "/events", string(b)))
+	if rr.Code != http.StatusOK {
+		t.Fatalf("status = %d, want 200; body=%s", rr.Code, rr.Body)
+	}
+	if len(fs.events) != 1 {
+		t.Fatalf("store has %d events, want 1", len(fs.events))
+	}
+	got := fs.events[0].Category
+	if got == nil || *got != event.CategoryDeepWork {
+		t.Fatalf("ingest did not classify null category to deep_work: %v", got)
+	}
+}
+
 func TestPostMalformedJSON(t *testing.T) {
-	h := New(&fakeStore{}, nil).Handler()
+	h := New(&fakeStore{}, nil, nil).Handler()
 	rr := do(t, h, newReq(t, "POST", "/events", "{not json"))
 	if rr.Code != http.StatusBadRequest {
 		t.Fatalf("status = %d, want 400", rr.Code)
@@ -146,7 +168,7 @@ func TestPostMalformedJSON(t *testing.T) {
 }
 
 func TestPostEmptyBody(t *testing.T) {
-	h := New(&fakeStore{}, nil).Handler()
+	h := New(&fakeStore{}, nil, nil).Handler()
 	rr := do(t, h, newReq(t, "POST", "/events", ""))
 	if rr.Code != http.StatusBadRequest {
 		t.Fatalf("status = %d, want 400", rr.Code)
@@ -155,7 +177,7 @@ func TestPostEmptyBody(t *testing.T) {
 
 func TestTimelineReturnsEventsInRange(t *testing.T) {
 	fs := &fakeStore{}
-	h := New(fs, nil).Handler()
+	h := New(fs, nil, nil).Handler()
 	base := time.Date(2025, 6, 1, 0, 0, 0, 0, time.UTC)
 	for i, off := range []time.Duration{0, time.Hour, 3 * time.Hour} {
 		e, _ := event.New(event.SourceOS, "m1", base.Add(off), base.Add(off+time.Minute), "Finder")
@@ -177,7 +199,7 @@ func TestTimelineReturnsEventsInRange(t *testing.T) {
 }
 
 func TestTimelineEmptyIsArrayNotNull(t *testing.T) {
-	h := New(&fakeStore{}, nil).Handler()
+	h := New(&fakeStore{}, nil, nil).Handler()
 	rr := do(t, h, newReq(t, "GET", "/timeline", ""))
 	if rr.Code != http.StatusOK {
 		t.Fatalf("status = %d, want 200", rr.Code)
@@ -188,7 +210,7 @@ func TestTimelineEmptyIsArrayNotNull(t *testing.T) {
 }
 
 func TestTimelineBadRange(t *testing.T) {
-	h := New(&fakeStore{}, nil).Handler()
+	h := New(&fakeStore{}, nil, nil).Handler()
 	rr := do(t, h, newReq(t, "GET", "/timeline?from=2025-06-02T00:00:00Z&to=2025-06-01T00:00:00Z", ""))
 	if rr.Code != http.StatusBadRequest {
 		t.Fatalf("status = %d, want 400", rr.Code)
@@ -203,7 +225,7 @@ func TestHealthz(t *testing.T) {
 	fs := &fakeStore{}
 	e, _ := event.New(event.SourceOS, "m1", time.Now().UTC(), time.Now().UTC(), "Finder")
 	fs.events = append(fs.events, *e)
-	h := New(fs, nil).Handler()
+	h := New(fs, nil, nil).Handler()
 	rr := do(t, h, newReq(t, "GET", "/healthz", ""))
 	if rr.Code != http.StatusOK {
 		t.Fatalf("status = %d, want 200", rr.Code)
@@ -219,7 +241,7 @@ func TestHealthz(t *testing.T) {
 }
 
 func TestNonLoopbackForbidden(t *testing.T) {
-	h := New(&fakeStore{}, nil).Handler()
+	h := New(&fakeStore{}, nil, nil).Handler()
 	req := httptest.NewRequest("GET", "/healthz", nil)
 	req.RemoteAddr = "203.0.113.7:9999" // public IP
 	rr := do(t, h, req)
@@ -229,7 +251,7 @@ func TestNonLoopbackForbidden(t *testing.T) {
 }
 
 func TestMethodNotAllowed(t *testing.T) {
-	h := New(&fakeStore{}, nil).Handler()
+	h := New(&fakeStore{}, nil, nil).Handler()
 	rr := do(t, h, newReq(t, "DELETE", "/events", ""))
 	if rr.Code != http.StatusMethodNotAllowed {
 		t.Fatalf("status = %d, want 405", rr.Code)

@@ -61,6 +61,8 @@ P1-B, P1-C, P1-D simultaneously.
 CADENCE_AGENT_PORT=47821       # default loopback port (override via env)
 CADENCE_DB_PATH=               # default: <os.UserConfigDir>/cadence/cadence.db (override via env)
 CADENCE_KEYCHAIN_SERVICE=com.cadence.agent   # keychain service; account = "store-key"
+CADENCE_RULES_PATH=            # optional JSON classifier ruleset; scaffolded with
+                              # the default on first run if missing. Unset = built-in default.
 # Local collector POST route: POST http://127.0.0.1:47821/events
 #   body: a single Event Contract object OR a JSON array (max 1000); idempotent
 #   on event_id; 200 -> {"accepted":n,"rejected":m,"errors":[...]}; invalid

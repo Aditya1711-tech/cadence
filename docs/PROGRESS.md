@@ -5,7 +5,7 @@
 > `[!]` blocked. Every `[x]` must be committed. Resuming sessions read this file
 > and the Build Log only — never the whole codebase.
 
-Last updated: 2026-06-27  ·  by stream: P1-B
+Last updated: 2026-06-27  ·  by stream: docs-audit (P1 contract/doc reconcile)
 
 ---
 
@@ -56,6 +56,23 @@ NOTE   P1-D : env var correction — the phase-doc P1-D var
 ---
 
 ## Phase 1 — Foundation
+
+**Exit-criteria status (gate to Phase 2) — audited 2026-06-27:**
+- [~] Daemon on macOS + Linux, survives logout/login, < 2% idle CPU —
+  **PARTIAL.** Windows backend runtime-verified (0.0% idle, ~3 MB). The mac/linux
+  collector backends + launchd/systemd units are authored & cross-compiled but
+  **NOT runtime-verified** (see P1-A.6/.9 notes).
+- [x] VSCode + Chrome events land in the local store with correct categories —
+  verified live (P1-B.7, P1-C.7).
+- [x] Dashboard shows today's timeline + category breakdown from local data only —
+  verified against the real daemon (P1-D.8, single machine).
+- [!] Both founders run it 14 continuous days with no crash — **NOT MET.** The
+  P1-A.11 soak is blocked: needs both founders' macOS + Linux machines for 14 days.
+
+**Verdict: Phase 1 is NOT fully gated.** Every build task is `[x]` except
+`P1-A.11` (`[!]`). The open items are runtime-only (mac/linux soak + 14-day
+dogfood) and need the founders' machines — no code work remains. Per the progress
+protocol §8 the phase gate is not satisfied until those pass.
 
 ### P1-A — agent core / store / contract / classifier  (SPINE)
 - [x] P1-A.1 explore active-window detection per OS
@@ -153,6 +170,7 @@ NOTE   P1-D : env var correction — the phase-doc P1-D var
 2026-06-27  P1-B.5  done   graceful degradation: retain-on-failure + timer retry, bounded queue (drop-oldest, logged), snapshot/restore backlog across editor restarts via globalState (idempotent re-send); commit 2ebe52b
 2026-06-27  P1-B.6  done   settings cadence.enabled off-switch + pause/resume/toggle commands + status-bar toggle (pause flushes, never discards); commit 2ebe52b
 2026-06-27  P1-B.7  done   verified: 22 node:test units + LIVE e2e vs real daemon incl. P1-A.7 classifier -> category deep_work, correct project/lang/is_idle, idempotency; ext-vscode/docs/verification-P1-B.7.md; P1-B stream COMPLETE; commit 2ebe52b
+2026-06-27  DOCS    done   audit as-built P1 code vs frozen contracts; §5 Event Contract = ZERO drift; reconciled doc-vs-code drift to code: ENV-VARIABLES + LOCAL-SETUP (port 8765->47821, keychain cadence-local->com.cadence.agent, db path, build ./cmd/cadence-agent), PHASE-1 P1-D + ENV/LOCAL (NEXT_PUBLIC_CADENCE_AGENT_BASE -> runtime CADENCE_AGENT_BASE + CADENCE_USE_MOCK), added missing agent env vars, documented local SQLite store as 00-SYSTEM-KNOWLEDGE §7.1; flagged P1 exit criteria unmet (mac/linux soak + 14-day dogfood); commit <pending>
 ```
 
 ---

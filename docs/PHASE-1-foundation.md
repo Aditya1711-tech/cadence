@@ -180,7 +180,13 @@ cadence.urlPrivacy=domain_only   # domain_only (default: origin-only url + null 
 
 ### Variables to set
 ```
-NEXT_PUBLIC_CADENCE_AGENT_BASE=http://127.0.0.1:<CADENCE_AGENT_PORT>
+# The dashboard lives at /web/dashboard and reads the daemon SERVER-SIDE (a
+# same-origin proxy), so these are RUNTIME vars — NOT NEXT_PUBLIC_*, which Next
+# inlines at build time and so can't be set per machine.
+CADENCE_AGENT_BASE=http://127.0.0.1:47821   # default; base URL of the local daemon
+CADENCE_USE_MOCK=0                           # 1/true renders fixtures instead of the daemon
+# NEXT_PUBLIC_CADENCE_AGENT_BASE is accepted only as a last-resort fallback.
+# See web/dashboard/.env.example. Check cmd: cd web/dashboard && npm ci && npm run lint && npm run build.
 ```
 
 ---

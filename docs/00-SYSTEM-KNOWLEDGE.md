@@ -170,6 +170,10 @@ Base path: `/api/v1`. JSON only. Auth via `Authorization: Bearer <jwt>`.
 
 ## 7. DATABASE CONVENTIONS (frozen)
 
+**Scope:** this section governs the **cloud** database (Postgres + TimescaleDB,
+Phase 2+). The Phase-1 **local** agent store is a different engine with its own
+conventions — documented as-built in §7.1 below.
+
 - Postgres 16. The `events` table is a **TimescaleDB hypertable** partitioned on
   `ts_start`. Continuous aggregates produce hourly + daily rollups.
 - All tables have `id uuid primary key default gen_random_uuid()`,
@@ -199,6 +203,34 @@ semantics with zero extra AWS services.
 - Migrations: Flyway, versioned `V1__init.sql`, `V2__...`. Owned by the spine
   stream of each phase. Other streams **request** a migration via the Build Log;
   they do not write to the migrations folder.
+
+### 7.1 Local agent store (Phase 1, as built)
+
+The daemon's local store is **SQLite** via `modernc.org/sqlite` (pure-Go, no
+CGO), not Postgres — see `/agent/internal/store/store.go`. It is single-user and
+on-device, so it deliberately diverges from the cloud conventions above:
+
+- **One `events` table.** `event_id TEXT PRIMARY KEY` (no surrogate `id uuid`).
+  There is **no `org_id`/tenancy** and **no RLS** — the device has one member.
+- **Timestamps are `INTEGER` Unix-milliseconds**, not `timestamptz`:
+  `ts_start_ms`, `ts_end_ms`, and `created_at` (epoch-ms). `duration_ms` and
+  `is_idle` (0/1) are also `INTEGER`.
+- **Sensitive columns are encrypted at rest as `BLOB`s** with AES-256-GCM, the
+  key held in the OS keychain (§8): `title_enc`, `url_enc`, `meta_enc`
+  (`meta_enc NOT NULL`). The structured, low-sensitivity columns stay plaintext
+  (`schema_ver`, `source`, `member_id`, `ts_*_ms`, `duration_ms`, `app`,
+  `project`, `category`, `is_idle`) so the dashboard can range/category-query and
+  aggregate without ever holding the key.
+- **Indexes:** `idx_events_ts_start (ts_start_ms)`, `idx_events_category (category)`.
+- **Idempotent append:** `INSERT … ON CONFLICT(event_id) DO NOTHING` (matches the
+  ingest idempotency convention). WAL mode, single writer.
+- **No Flyway.** The schema is a `CREATE TABLE IF NOT EXISTS` applied on open;
+  `schema_ver` mirrors the Event Contract `SchemaVersion` (currently `1`). A
+  future store-schema change (e.g. P2-B's sync cursor) is the agent's first
+  real migration step.
+
+The on-wire shape the store round-trips is the frozen Event Contract (§5),
+unchanged.
 
 ---
 

@@ -13,14 +13,24 @@ Legend — **Where:** `agent` (local daemon), `backend` (Spring on box),
 
 | Variable | Where | Example | Notes |
 |---|---|---|---|
-| `CADENCE_AGENT_PORT` | agent, web | `8765` | Loopback port collectors POST to / dashboard reads. |
-| `CADENCE_DB_PATH` | agent | `~/.cadence/local.db` | Encrypted SQLite path. |
-| `CADENCE_KEYCHAIN_SERVICE` | agent | `cadence-local` | Keychain entry holding the DB key. |
-| `NEXT_PUBLIC_CADENCE_AGENT_BASE` | web | `http://127.0.0.1:8765` | Dashboard → daemon. |
+| `CADENCE_AGENT_PORT` | agent, web | `47821` | Loopback port collectors POST to / dashboard reads. Agent default. |
+| `CADENCE_DB_PATH` | agent | `~/.config/cadence/cadence.db` | Encrypted SQLite path. Unset → `<os.UserConfigDir>/cadence/cadence.db`. |
+| `CADENCE_KEYCHAIN_SERVICE` | agent | `com.cadence.agent` | Keychain service; accounts `store-key` (DB key) + `member-id` (identity). |
+| `CADENCE_MEMBER_ID` | agent | _(unset)_ | Optional; unset → a uuid is generated and persisted in the keychain. |
+| `CADENCE_RULES_PATH` | agent | _(unset)_ | Optional JSON classifier ruleset; scaffolded with the default on first run. Unset → built-in default. |
+| `CADENCE_REDACT_PATH` | agent | _(unset)_ | Optional JSON `{"patterns":[…]}`; matching titles/urls hashed before store. Unset → off. |
+| `CADENCE_AGENT_BASE` | web | `http://127.0.0.1:47821` | Dashboard → daemon. Server-side **runtime** var (read by the proxy). |
+| `CADENCE_USE_MOCK` | web | `0` | `1`/`true` renders fixtures instead of the live daemon. |
 | `cadence.enabled` (VSCode) | vscode | `true` | Extension setting. |
-| `cadence.agentPort` (VSCode/Chrome) | ext | `8765` | Must match agent port. |
-| `cadence.redactPaths` (VSCode) | vscode | `true` | Redact file paths. |
+| `cadence.agentPort` (VSCode/Chrome) | ext | `47821` | Must match `CADENCE_AGENT_PORT`. |
+| `cadence.redactPaths` (VSCode) | vscode | `true` | Redact file paths (basename + project only). |
+| `cadence.idleThresholdSec` (VSCode) | vscode | `300` | Focus-session idle cutoff; matches the OS collector. |
 | `cadence.urlPrivacy` (Chrome) | chrome | `domain_only` | `domain_only`/`full`. |
+
+> The dashboard reads the daemon **server-side** at runtime, so it uses
+> `CADENCE_AGENT_BASE` — **not** `NEXT_PUBLIC_*`, which Next inlines at build time
+> and so cannot be set per machine. `NEXT_PUBLIC_CADENCE_AGENT_BASE` is accepted
+> only as a last-resort fallback.
 
 ---
 

@@ -24,17 +24,18 @@ You can run and dogfood the foundation without any backend.
 ```bash
 # Agent (daemon)
 cd agent
-go build -o cadenced ./cmd/cadenced
-# set the variables from PHASE-1 "Variables to set":
-export CADENCE_AGENT_PORT=8765
-export CADENCE_DB_PATH="$HOME/.cadence/local.db"
-export CADENCE_KEYCHAIN_SERVICE="cadence-local"
-./cadenced            # or install as a login service via the provided script
+go build -o cadence-agent ./cmd/cadence-agent
+# Variables from PHASE-1 "Variables to set" — all optional; shown with their
+# defaults. Unset CADENCE_DB_PATH resolves to <os.UserConfigDir>/cadence/cadence.db.
+export CADENCE_AGENT_PORT=47821
+export CADENCE_DB_PATH="$HOME/.config/cadence/cadence.db"
+export CADENCE_KEYCHAIN_SERVICE="com.cadence.agent"
+./cadence-agent       # or install as a login service via agent/dist/install.sh
 
-# Personal dashboard
-cd ../web
+# Personal dashboard (lives in web/dashboard/; reads the daemon server-side)
+cd ../web/dashboard
 npm ci
-echo "NEXT_PUBLIC_CADENCE_AGENT_BASE=http://127.0.0.1:8765" > .env.local
+echo "CADENCE_AGENT_BASE=http://127.0.0.1:47821" > .env.local
 npm run dev           # open the dashboard route
 
 # VSCode extension: open ext-vscode/ in VSCode, F5 to launch the Extension Host

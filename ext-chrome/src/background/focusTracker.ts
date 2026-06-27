@@ -3,6 +3,7 @@
 // spans. All chrome.* access for focus tracking is concentrated here.
 
 import { extractDomain } from "../shared/url.js";
+import { getSettings } from "../shared/settings.js";
 import type { IdleState } from "../shared/types.js";
 import { appendSpan, getLiveState, setLiveState } from "./storage.js";
 import {
@@ -47,7 +48,8 @@ async function persistSpan(span: Awaited<ReturnType<typeof checkpoint>>["span"])
  */
 export async function reconcile(now: number): Promise<void> {
   const state = await getLiveState();
-  const engaged = state.browserFocused && state.idle === "active";
+  const { paused } = await getSettings();
+  const engaged = !paused && state.browserFocused && state.idle === "active";
   const target = engaged ? await getFocusedActiveTab() : null;
   const endedIdle = state.idle !== "active";
   const { nextSession, span } = decideTransition(state.session, target, now, endedIdle);

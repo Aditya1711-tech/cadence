@@ -1,7 +1,7 @@
 // Build script for the Cadence Chrome extension.
 //
-// Bundles the MV3 service worker with esbuild and stages the static manifest
-// into dist/. The popup (P1-C.6) will be added here as a second entry point.
+// Bundles the MV3 service worker and the popup with esbuild and stages the
+// static files (manifest + popup html/css) into dist/.
 // Run via `npm run build` (which typechecks first). Pass --watch for dev.
 import * as esbuild from "esbuild";
 import { cpSync, mkdirSync, rmSync } from "node:fs";
@@ -13,11 +13,16 @@ rmSync(outdir, { recursive: true, force: true });
 mkdirSync(outdir, { recursive: true });
 
 // Static assets copied verbatim into the extension root.
-cpSync("manifest.json", `${outdir}/manifest.json`);
+for (const file of ["manifest.json", "popup.html", "popup.css"]) {
+  cpSync(file, `${outdir}/${file}`);
+}
 
 /** @type {import('esbuild').BuildOptions} */
 const options = {
-  entryPoints: { background: "src/background/index.ts" },
+  entryPoints: {
+    background: "src/background/index.ts",
+    popup: "src/popup/popup.ts",
+  },
   bundle: true,
   format: "esm",
   // MV3 service workers run in a recent Chromium; target matches our manifest.

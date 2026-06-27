@@ -58,7 +58,7 @@ OPEN      P1-C -> P1-A : expose install-time member_id via the local API so all 
 - [x] P1-C.3 track active tab + focus duration
 - [x] P1-C.4 emit events per policy
 - [x] P1-C.5 map dev domains to categories
-- [ ] P1-C.6 popup UI
+- [x] P1-C.6 popup UI
 - [ ] P1-C.7 verify events + redaction
 
 ### P1-D — personal dashboard (local)
@@ -99,6 +99,8 @@ OPEN      P1-C -> P1-A : expose install-time member_id via the local API so all 
 2026-06-27  P1-C.5  done   contract.ts Category mirror + categorize(); host/suffix/docs rules; 15-case behavioral check green, build green; commit 844f195
 2026-06-27  P1-C.4  doing  rebased onto P1-A.5 (port 47821, POST /events); emit module: span->Event, domain_only/full policy, interim member_id, flush w/ graceful degradation
 2026-06-27  P1-C.4  done   emit.ts span->Event (domain_only origin+null-title / full), interim member_id, batched flush to 127.0.0.1:47821 w/ graceful degradation; wired to heartbeat+startup; shaping Validate-clean via ported-rules check + build green; live daemon round-trip needs running Go agent -> P1-C.7/founder machines; commit 34d7f5c
+2026-06-27  P1-C.6  doing  popup: today's top sites (via daemon /timeline), pause toggle, privacy toggle; paused wired into tracker
+2026-06-27  P1-C.6  done   popup.html/css + popup.ts (pause toggle, urlPrivacy select, today's top sites via daemon /timeline + offline state); paused honored in reconcile + storage.onChanged for prompt effect; sites helpers verified (15 asserts), build green; in-browser render -> P1-C.7; commit <pending>
 ```
 
 ---

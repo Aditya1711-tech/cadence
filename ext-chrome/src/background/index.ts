@@ -9,6 +9,7 @@ import {
   HEARTBEAT_PERIOD_MINUTES,
   IDLE_DETECTION_SECONDS,
 } from "../shared/constants.js";
+import { SETTINGS_KEY } from "../shared/settings.js";
 import { getLiveState, setLiveState } from "./storage.js";
 import {
   onBrowserFocusChanged,
@@ -66,6 +67,14 @@ chrome.windows.onFocusChanged.addListener((windowId) => {
 // User went idle/locked or came back.
 chrome.idle.onStateChanged.addListener((idleState) => {
   serialize(() => onIdleChanged(idleState, now()));
+});
+
+// Settings changed in the popup (e.g. pause toggled) — reconcile immediately so
+// pausing closes the open session now rather than at the next heartbeat.
+chrome.storage.onChanged.addListener((changes, area) => {
+  if (area === "local" && changes[SETTINGS_KEY]) {
+    serialize(() => reconcile(now()));
+  }
 });
 
 // Heartbeat: checkpoint long sessions, then flush completed spans to the daemon.

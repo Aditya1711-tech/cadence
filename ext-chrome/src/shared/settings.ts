@@ -14,13 +14,17 @@ export interface Settings {
   agentPort: number;
   /** domain_only (default) sends origin-only url + null title; full sends both. */
   urlPrivacy: UrlPrivacy;
+  /** When true, the collector stops tracking (popup pause button). */
+  paused: boolean;
 }
 
-const SETTINGS_KEY = "cadence.settings";
+/** chrome.storage.local key for settings — exported so the SW can watch it. */
+export const SETTINGS_KEY = "cadence.settings";
 
 const DEFAULTS: Settings = {
   agentPort: DEFAULT_AGENT_PORT,
   urlPrivacy: DEFAULT_URL_PRIVACY,
+  paused: false,
 };
 
 /** Reads settings, filling any missing field with its default. */

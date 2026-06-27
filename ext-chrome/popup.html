@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="stylesheet" href="popup.css" />
+    <title>Cadence</title>
+  </head>
+  <body>
+    <header>
+      <h1>Cadence</h1>
+      <button id="pause" class="pause" type="button">Pause tracking</button>
+    </header>
+
+    <section class="sites">
+      <h2>Today's top sites</h2>
+      <ul id="site-list" class="site-list"></ul>
+      <p id="status" class="status"></p>
+    </section>
+
+    <footer>
+      <label class="privacy">
+        URL privacy
+        <select id="privacy">
+          <option value="domain_only">Domain only</option>
+          <option value="full">Full URL</option>
+        </select>
+      </label>
+      <p class="note">Local only. Nothing leaves your device except what the
+        daemon syncs. No screenshots, no page contents.</p>
+    </footer>
+
+    <script type="module" src="popup.js"></script>
+  </body>
+</html>

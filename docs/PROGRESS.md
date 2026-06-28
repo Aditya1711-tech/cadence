@@ -274,7 +274,7 @@ protocol §8 the phase gate is not satisfied until those pass.
 ### P2-E — org admin dashboard
 - [x] P2-E.1 explore admin needs (trust-first)
 - [x] P2-E.2 onboarding flow UX
-- [ ] P2-E.3 auth pages
+- [x] P2-E.3 auth pages
 - [ ] P2-E.4 roster + invites + privacy control
 - [ ] P2-E.5 team summary (heatmap/tokens/commits)
 - [ ] P2-E.6 member drilldown (privacy-bounded)
@@ -335,6 +335,7 @@ protocol §8 the phase gate is not satisfied until those pass.
 2026-06-28  P2-D     note   SPINE FOLLOW-UP (phase gate §8): deploy/.env.example (/deploy is spine-owned) lacks GITHUB_APP_ID/GITHUB_APP_PRIVATE_KEY/GITHUB_WEBHOOK_SECRET/GITHUB_DEFAULT_MODE — already in docs/ENV-VARIABLES.md + PHASE-2 P2-D block; please add to .env.example + LOCAL-SETUP GitHub-App registration steps (webhook URL = <base>/api/v1/github/webhook). full_diff also needs GITHUB_APP_ID + GITHUB_APP_PRIVATE_KEY once enrichment is implemented.
 2026-06-27  P2-E.1  done   admin-needs exploration (trust-first): grounded the UI in the as-built P2-A contract (auth surface, /org/members, /org/summary{orgTotalsByCategory,orgByDay heatmap,byMember rollups+tokens}); see+do list, privacy-as-trust-banner rules; drilldown is the byMember slice (privacy-bounded by construction, no per-event detail); web/admin/docs/01-requirements-exploration.md
 2026-06-27  P2-E.2  done   onboarding-flow UX: register->set-privacy->invite(targeted/open link)->member-accept->install+device-code->data-appears; <30min/zero-DB exit criterion; ARCH decision = BFF proxy + httpOnly-cookie session (no CORS change vs spine SecurityConfig; tokens off JS; invisible refresh); self-contained Next app under /web/admin (no P2 web spine exists). 3 gaps filed as NEEDS (set-privacy endpoint, commit-activity field, env var). STOP: present findings to user before P2-E.3 implementation.
+2026-06-28  P2-E.3  done   self-contained Next 14 app scaffolded under /web/admin (mirrors P1-D toolchain); BFF + httpOnly-cookie session (lib/api: config/session/backend/problem/auth-bff) w/ invisible refresh-on-401 + cookie rotation; TS contract mirrors (snake_case) of AuthDtos/Summaries; auth routes /api/auth/{login,register,accept,logout,session,invite/[token]}; pages login/register/accept-invite + authenticated (admin) shell (server-read session, nav, privacy banner, logout); middleware route gate. npm run lint + build GREEN (7 routes). USER-CONFIRMED arch=BFF, interim-gaps. commit b84aa10
 ```
 
 ---

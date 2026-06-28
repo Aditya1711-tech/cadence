@@ -7,11 +7,13 @@ package main
 import (
 	"context"
 	"errors"
+	"fmt"
 	"log/slog"
 	"net/http"
 	"os"
 	"os/signal"
 	"path/filepath"
+	"strconv"
 	"syscall"
 	"time"
 
@@ -22,20 +24,72 @@ import (
 	"github.com/Aditya1711-tech/cadence/agent/internal/keyring"
 	"github.com/Aditya1711-tech/cadence/agent/internal/redact"
 	"github.com/Aditya1711-tech/cadence/agent/internal/store"
+	cloudsync "github.com/Aditya1711-tech/cadence/agent/sync"
 )
 
 const (
-	defaultPort     = "47821"
-	defaultService  = "com.cadence.agent"
-	keychainAccount = "store-key"
+	defaultPort      = "47821"
+	defaultService   = "com.cadence.agent"
+	keychainAccount  = "store-key"
+	defaultCloudBase = "http://localhost:8080"
+	syncDBName       = "cadence-sync.db"
 )
 
 func main() {
 	log := slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: slog.LevelInfo}))
 
+	// Subcommands (P2-B): `enroll <code>` and `status`. With no args, run the daemon.
+	if len(os.Args) > 1 {
+		if err := runSubcommand(log, os.Args[1], os.Args[2:]); err != nil {
+			log.Error("command failed", "command", os.Args[1], "err", err)
+			os.Exit(1)
+		}
+		return
+	}
+
 	if err := run(log); err != nil {
 		log.Error("agent exited with error", "err", err)
 		os.Exit(1)
+	}
+}
+
+// runSubcommand handles the P2-B cloud-sync CLI: device enrollment and status.
+// These are thin shells over the /agent/sync package; all logic lives there.
+func runSubcommand(log *slog.Logger, cmd string, args []string) error {
+	service := envOr("CADENCE_KEYCHAIN_SERVICE", defaultService)
+	switch cmd {
+	case "enroll":
+		if len(args) < 1 || args[0] == "" {
+			return fmt.Errorf("usage: cadence-agent enroll <code>")
+		}
+		keys := cloudsync.NewKeystore(keyring.OS{}, service)
+		client := cloudsync.NewClient(envOr("CADENCE_CLOUD_BASE", defaultCloudBase), nil)
+		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+		defer cancel()
+		creds, err := cloudsync.Enroll(ctx, client, keys, args[0])
+		if err != nil {
+			return err
+		}
+		log.Info("device enrolled; cloud sync will begin shortly", "member_id", creds.MemberID)
+		return nil
+	case "status":
+		keys := cloudsync.NewKeystore(keyring.OS{}, service)
+		var state *cloudsync.State
+		if p, err := resolveSyncDBPath(); err == nil {
+			if s, oerr := cloudsync.OpenState(p); oerr == nil {
+				state = s
+				defer state.Close()
+			}
+		}
+		snap, err := cloudsync.Snapshot(keys, state)
+		if err != nil {
+			return err
+		}
+		log.Info("agent status",
+			"enrolled", snap.Enrolled, "member_id", snap.MemberID, "synced_rows", snap.SyncedRows)
+		return nil
+	default:
+		return fmt.Errorf("unknown command %q (want: enroll, status)", cmd)
 	}
 }
 
@@ -97,6 +151,7 @@ func run(log *slog.Logger) error {
 	}()
 
 	startCollector(ctx, log, service, addr)
+	startSync(ctx, log, service, st)
 
 	select {
 	case err := <-errCh:
@@ -160,6 +215,65 @@ func startCollector(ctx context.Context, log *slog.Logger, service, addr string)
 		log.Info("OS collector started", "member_id", memberID)
 		_ = col.Run(ctx)
 	}()
+}
+
+// startSync starts the P2-B cloud-sync loop in the background. It is always
+// started; when the device is not yet enrolled the loop simply stands by
+// (reloading credentials each cycle), so `cadence-agent enroll` in a separate
+// process turns sync on without restarting the daemon. The sidecar state DB is
+// closed on shutdown. Failures to set up are logged, not fatal — local-only
+// operation continues regardless.
+func startSync(ctx context.Context, log *slog.Logger, service string, reader cloudsync.EventReader) {
+	syncDB, err := resolveSyncDBPath()
+	if err != nil {
+		log.Warn("cloud sync disabled: cannot resolve sync db path", "err", err)
+		return
+	}
+	state, err := cloudsync.OpenState(syncDB)
+	if err != nil {
+		log.Warn("cloud sync disabled: cannot open sync state", "err", err)
+		return
+	}
+	base := envOr("CADENCE_CLOUD_BASE", defaultCloudBase)
+	keys := cloudsync.NewKeystore(keyring.OS{}, service)
+	client := cloudsync.NewClient(base, nil)
+	syncer := cloudsync.NewSyncer(reader, state, keys, client, cloudsync.Config{
+		Interval: syncInterval(),
+		Logger:   log,
+	})
+	if keys.Enrolled() {
+		log.Info("cloud sync enabled", "member_id", keys.MemberID(), "base", base)
+	} else {
+		log.Info("cloud sync standing by (device not enrolled; run `cadence-agent enroll <code>`)")
+	}
+	go func() {
+		defer state.Close()
+		syncer.Run(ctx)
+	}()
+}
+
+// syncInterval returns the sync loop cadence from CADENCE_SYNC_INTERVAL_SEC
+// (seconds), defaulting to 5 minutes.
+func syncInterval() time.Duration {
+	if v := os.Getenv("CADENCE_SYNC_INTERVAL_SEC"); v != "" {
+		if n, err := strconv.Atoi(v); err == nil && n > 0 {
+			return time.Duration(n) * time.Second
+		}
+	}
+	return 5 * time.Minute
+}
+
+// resolveSyncDBPath returns CADENCE_SYNC_DB_PATH or a sibling of the main store
+// DB (e.g. ~/.config/cadence/cadence-sync.db).
+func resolveSyncDBPath() (string, error) {
+	if p := os.Getenv("CADENCE_SYNC_DB_PATH"); p != "" {
+		return p, nil
+	}
+	dbPath, err := resolveDBPath()
+	if err != nil {
+		return "", err
+	}
+	return filepath.Join(filepath.Dir(dbPath), syncDBName), nil
 }
 
 // loadOrCreateMemberID returns a stable local member identity, from

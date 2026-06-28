@@ -5,7 +5,7 @@
 > `[!]` blocked. Every `[x]` must be committed. Resuming sessions read this file
 > and the Build Log only — never the whole codebase.
 
-Last updated: 2026-06-28  ·  by stream: P2-F (merged P2-F.1-.5)
+Last updated: 2026-06-28  ·  by stream: DOCS (Phase-2 as-built audit + reconcile)
 
 ---
 
@@ -259,6 +259,34 @@ protocol §8 the phase gate is not satisfied until those pass.
 
 ## Phase 2 — Cloud + Org
 
+**Exit-criteria status (gate to Phase 3) — audited 2026-06-28 (docs audit):**
+- [~] New org can self-register, invite members, **set a privacy level** —
+  **PARTIAL.** Self-register (`POST /auth/register-org`) + invite
+  (`POST /org/invites` → `/auth/invite/accept`) work. **Set privacy: NOT MET** —
+  no endpoint mutates `orgs.privacy_level`; it's fixed at the server default and
+  only readable. NEEDS P2-E→P2-A (setter, e.g. `PATCH /org/settings`) is open.
+- [~] Daemon syncs events; admin sees team rollups honoring privacy —
+  **CODE-COMPLETE, runtime-unverified.** P2-B sync + P2-A read path are built and
+  privacy-aware; full live e2e needs a Docker host (P2-A.10 still `[~]`).
+- [!] Token spend + GitHub commit activity visible — **SPLIT.** Token spend
+  per member/model/day is built (`events_daily_tokens`, `/me/tokens`,
+  `/org/tokens`). **GitHub commits: NOT MET** — webhook code exists but the
+  `V2 github_installations` migration is unwritten (webhook can't resolve an org,
+  so no github events store) and no commit data is surfaced in `/org/summary`
+  (admin UI shows "GitHub not connected").
+- [!] 3 pilot companies onboarded, zero manual DB work — **NOT MET.** Two
+  owed migrations remain manual-DB gaps the spine still owes: `V2
+  github_installations` (P2-D) and `claim_categorize_jobs()` SECURITY DEFINER
+  (P2-F, worker idles without it). No live pilots onboarded (runtime deferred —
+  no Docker host on this dev box).
+
+**Verdict: Phase 2 is code-complete on nearly all stream tasks but NOT fully
+gated.** Concrete remaining spine (P2-A) work before the Phase-3 gate: (1) the
+privacy-level setter endpoint, (2) `V2 github_installations` + surfacing commits
+in `/org/summary`, (3) `claim_categorize_jobs()` migration, (4) run the authored
+e2e (P2-A.10) + onboard pilots on a Docker host. All four were already filed as
+NEEDS/HANDOFF; this audit only confirms them against the as-built code.
+
 ### P2-A — backend / auth / schema / contracts  (SPINE)
 - [x] P2-A.1 explore multi-tenant model + onboarding UX
 - [x] P2-A.2 explore JWT/invite flows
@@ -370,6 +398,7 @@ protocol §8 the phase gate is not satisfied until those pass.
 2026-06-28  P2-F.4  done   pattern cache: RedisPatternCache (StringRedisTemplate, per-org keyed, TTL cache-ttl-days). Key=source|app|norm-title(drop ' — project' suffix)|url-host so app/title repeats + same-file re-opens never re-hit the LLM. PatternCacheKeyTest covers normalisation. commit 3457faf
 2026-06-28  P2-F.5  done   guardrails+metrics: RedisDailyTokenCap per-org/UTC-day budget (CADENCE_CATEGORIZE_DAILY_TOKEN_CAP; 0=unlimited; exhausted=defer/soft-degrade, never fail). Micrometer counters cadence.categorize.{jobs[result],cache[outcome],llm.calls,llm.tokens} via actuator. commit 3457faf
 2026-06-28  P2-F     note   deps added (build.gradle.kts): spring-boot-starter-data-redis + com.anthropic:anthropic-java:2.34.0. config (application.yml): spring.data.redis.url + cadence.categorize.*. Whole worker stack @ConditionalOnProperty(cadence.categorize.enabled=true), default false -> dev box (no API key/Redis/Docker) boots backend untouched & build stays green. Phase-2 P2-F Variables block filled.
+2026-06-28  DOCS    done   audit as-built Phase-2 cloud vs frozen §6/§7/§8 (code = ground truth, no backend code changed). §6: documented as-built idempotency key (event_id,ts_start), ingest/list response envelopes, the 15 P2 routes beyond the frozen table, and the missing privacy-level setter. §7: named the 3 CAGGs + their grain (per member/org, no per-team/commit rollup), events/team_members PK exceptions, RLS-is-a-backstop-while-app-runs-as-owner reality, job_queue org_id, and the two owed migrations (V2 github_installations, claim_categorize_jobs). §8: store-raw/redact-on-read. Filled real values into PHASE-2 Variables blocks (P2-B sync-db, P2-C codex/pricing, P2-E CADENCE_API_BASE) + ENV-VARIABLES (JDBC scheme, SMTP, categorize tuning, web BFF var) + deploy/.env.example (github+categorize). Recorded Phase-2 exit-criteria audit above. Reported PHASE-3 READINESS (P3-A facts from CAGGs; commits+fragmentation are gaps; P3-C needs a read-only org-scoped role — none exists; token events confirmed counts/cost/model only). commit <pending>
 ```
 
 ---

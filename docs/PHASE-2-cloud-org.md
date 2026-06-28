@@ -103,8 +103,10 @@ SMTP_STARTTLS=true
 
 ### Variables to set
 ```
-CADENCE_CLOUD_BASE=https://api.<yourdomain>   # or http://localhost:8080 in dev
+CADENCE_CLOUD_BASE=https://api.<yourdomain>   # or http://localhost:8080 in dev (default)
 CADENCE_SYNC_INTERVAL_SEC=300
+CADENCE_SYNC_DB_PATH=                          # as-built: sync sidecar DB; default
+                                              # sibling of CADENCE_DB_PATH (cadence-sync.db)
 # member token persisted in keychain after enrollment (not an env var)
 ```
 
@@ -131,8 +133,15 @@ CADENCE_SYNC_INTERVAL_SEC=300
 
 ### Variables to set
 ```
-CADENCE_TOKEN_SOURCES=claude_code,codex,cursor   # auto-detected; overridable
+CADENCE_TOKEN_SOURCES=claude_code,codex,cursor   # auto-detected; cursor is
+                                                 # recognized but server-side-only (not tailed)
 CADENCE_CLAUDE_CODE_LOG_DIR=                      # optional override
+# As-built additions (P2-C):
+CADENCE_CODEX_LOG_DIR=                            # optional override
+CADENCE_CODEX_DEFAULT_MODEL=gpt-5-codex           # model when a Codex line omits it
+CADENCE_TOKEN_PRICING_PATH=                       # optional JSON per-model price overlay
+CADENCE_TOKEN_STATE_DIR=                          # tail-cursor dir; default OS config dir
+# No backend env vars: the P2-C.5 token endpoints reuse P2-A's datasource.
 ```
 
 ---
@@ -187,7 +196,10 @@ GITHUB_DEFAULT_MODE=commit_messages_only
 
 ### Variables to set
 ```
-NEXT_PUBLIC_API_BASE=https://api.<yourdomain>   # or http://localhost:8080
+# As-built correction (mirrors P1-D): the admin app talks to the backend
+# SERVER-SIDE via a BFF proxy, so it reads a RUNTIME var, not the build-inlined
+# NEXT_PUBLIC_*. NEXT_PUBLIC_API_BASE is accepted only as a last-resort fallback.
+CADENCE_API_BASE=http://localhost:8080          # admin BFF -> backend (runtime)
 ```
 
 ---

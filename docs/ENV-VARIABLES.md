@@ -38,26 +38,44 @@ Legend — **Where:** `agent` (local daemon), `backend` (Spring on box),
 
 | Variable | Where | Example | Notes |
 |---|---|---|---|
-| `DATABASE_URL` | backend | `postgres://cadence:pw@postgres:5432/cadence` | |
-| `DATABASE_USER` | backend, box | `cadence` | |
-| `DATABASE_PASSWORD` | backend, box | `<strong>` | Never commit. |
-| `JWT_SIGNING_SECRET` | backend | `<32+ bytes>` | Rotate carefully. |
-| `JWT_TTL_MINUTES` | backend | `60` | |
-| `REDIS_URL` | backend | `redis://redis:6379` | |
+| `DATABASE_URL` | backend | `jdbc:postgresql://localhost:5432/cadence` | **JDBC scheme** — Spring rejects `postgres://`. |
+| `DATABASE_USER` | backend, box | `cadence` | App connects as the **owner** today (RLS is a backstop; see §7). |
+| `DATABASE_PASSWORD` | backend, box | `<strong>` | Never commit. Dev compose default `cadence`. |
+| `JWT_SIGNING_SECRET` | backend | `<32+ bytes>` | Backend refuses to start if shorter. Rotate carefully. |
+| `JWT_TTL_MINUTES` | backend | `60` | Access-token TTL. |
+| `REDIS_URL` | backend | `redis://redis:6379` | P2-F pattern cache + daily token cap. |
 | `SERVER_PORT` | backend | `8080` | |
-| `DEFAULT_ORG_PRIVACY` | backend | `categories_only` | `full`/`categories_only`/`aggregate_only`. |
-| `CADENCE_CLOUD_BASE` | agent | `https://api.<domain>` | Daemon sync target. |
+| `DEFAULT_ORG_PRIVACY` | backend | `categories_only` | `full`/`categories_only`/`aggregate_only`. Org default at register; **no API setter yet** (§6 gap). |
+| `APP_PUBLIC_BASE_URL` | backend | `http://localhost:3000` | Base for invite/reset links in emails. |
+| `SMTP_HOST` | backend | _(empty in dev)_ | Empty → reset/enroll links are logged, not emailed. |
+| `SMTP_PORT` | backend | `587` | |
+| `SMTP_USERNAME` | backend | | |
+| `SMTP_PASSWORD` | backend | | |
+| `SMTP_FROM` | backend | `no-reply@cadence.local` | |
+| `SMTP_STARTTLS` | backend | `true` | |
+| `CADENCE_CLOUD_BASE` | agent | `http://localhost:8080` | Daemon sync target (default localhost:8080). |
 | `CADENCE_SYNC_INTERVAL_SEC` | agent | `300` | |
-| `CADENCE_TOKEN_SOURCES` | agent | `claude_code,codex,cursor` | Auto-detected; overridable. |
+| `CADENCE_SYNC_DB_PATH` | agent | _(unset)_ | Sync sidecar DB; default sibling of `CADENCE_DB_PATH` (`cadence-sync.db`). |
+| `CADENCE_TOKEN_SOURCES` | agent | `claude_code,codex,cursor` | Auto-detected; `cursor` recognized but server-side-only (not tailed). |
 | `CADENCE_CLAUDE_CODE_LOG_DIR` | agent | _(unset)_ | Optional override. |
-| `GITHUB_APP_ID` | backend | | |
+| `CADENCE_CODEX_LOG_DIR` | agent | _(unset)_ | Optional override. |
+| `CADENCE_CODEX_DEFAULT_MODEL` | agent | `gpt-5-codex` | Model when a Codex log line omits it. |
+| `CADENCE_TOKEN_PRICING_PATH` | agent | _(unset)_ | Optional JSON per-model price overlay (cost is computed from tokens). |
+| `CADENCE_TOKEN_STATE_DIR` | agent | _(unset)_ | Tail-cursor dir; default OS config dir. |
+| `GITHUB_APP_ID` | backend | | Required for `full_diff` enrichment. |
 | `GITHUB_APP_PRIVATE_KEY` | backend | `<base64 PEM>` | |
-| `GITHUB_WEBHOOK_SECRET` | backend | | |
+| `GITHUB_WEBHOOK_SECRET` | backend | | HMAC verify of `/github/webhook`. |
 | `GITHUB_DEFAULT_MODE` | backend | `commit_messages_only` | Never default to code. |
-| `NEXT_PUBLIC_API_BASE` | web | `https://api.<domain>` | |
-| `ANTHROPIC_API_KEY` | backend | `sk-...` | Shared across AI features. |
+| `CADENCE_API_BASE` | web | `http://localhost:8080` | **Admin BFF → backend, runtime** (mirrors the P1-D fix). `NEXT_PUBLIC_API_BASE` is a build-inlined last-resort fallback only. |
+| `ANTHROPIC_API_KEY` | backend | `sk-...` | Read by the Anthropic SDK; shared across AI features. |
+| `CADENCE_CATEGORIZE_ENABLED` | backend | `false` | Whole worker stack is off unless `true` (needs key + Redis). |
 | `CADENCE_CATEGORIZE_MODEL` | backend | `claude-haiku-4-5` | Cheap batch model. |
-| `CADENCE_CATEGORIZE_DAILY_TOKEN_CAP` | backend | `2000000` | Per-org guardrail. |
+| `CADENCE_CATEGORIZE_DAILY_TOKEN_CAP` | backend | `0` | Per-org/day; `0` = unlimited. |
+| `CADENCE_CATEGORIZE_POLL_MS` | backend | `2000` | Claim poll interval. |
+| `CADENCE_CATEGORIZE_BATCH` | backend | `20` | Keep ≤ datasource pool size (20). |
+| `CADENCE_CATEGORIZE_MAX_ATTEMPTS` | backend | `5` | Then mark job `failed`. |
+| `CADENCE_CATEGORIZE_MAX_OUTPUT_TOKENS` | backend | `256` | |
+| `CADENCE_CATEGORIZE_CACHE_TTL_DAYS` | backend | `30` | Pattern-cache TTL. |
 
 ---
 

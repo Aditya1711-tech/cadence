@@ -166,6 +166,44 @@ Base path: `/api/v1`. JSON only. Auth via `Authorization: Bearer <jwt>`.
 - Every privacy-sensitive field obeys the org's privacy policy server-side
   (see §8) — never trust the client to have redacted.
 
+**As-built (Phase 2) — reconciliations to the table/conventions above:**
+- **Idempotency key is `(event_id, ts_start)`**, not `event_id` alone: the
+  `events` hypertable requires its partition column (`ts_start`) in every unique
+  index. A re-sent event carries the same `event_id` AND `ts_start`, so
+  `ON CONFLICT (event_id, ts_start) DO NOTHING` dedupes identically.
+- **Ingest response:** `{ received, stored, duplicates }` (all ints).
+- **List envelopes:** `/me/timeline` and `/org/members` return
+  `{ items: [...], next_cursor }`; pass `next_cursor` back as `?cursor=`.
+  `?limit` defaults to 100, capped at 1000. Rollup endpoints (`/me/summary`,
+  `/org/summary`, `/me/tokens`, `/org/tokens`) take `?range` (+ `?team` for org),
+  not a cursor. `/me/timeline` also requires `?from` & `?to`.
+- **Additional routes added by P2 streams (frozen as-built):**
+
+| Method | Path | Purpose | Stream |
+|---|---|---|---|
+| `POST` | `/api/v1/auth/refresh` | Rotate refresh → new token pair | P2-A |
+| `POST` | `/api/v1/auth/logout` | Revoke a refresh token + family | P2-A |
+| `GET`  | `/api/v1/auth/invite/{token}` | Preview an invite | P2-A |
+| `POST` | `/api/v1/auth/invite/accept` | Accept invite → member + tokens | P2-A |
+| `POST` | `/api/v1/auth/password/forgot` | Request reset link | P2-A |
+| `POST` | `/api/v1/auth/password/reset` | Reset via one-time token | P2-A |
+| `POST` | `/api/v1/auth/device/enroll` | Daemon enroll via device code | P2-A/P2-B |
+| `POST` | `/api/v1/org/invites` | Admin: create invite | P2-A |
+| `POST` | `/api/v1/me/device-codes` | Member: mint device-enroll code | P2-A |
+| `GET`  | `/api/v1/me/tokens?range` | Caller's token spend (day/model) | P2-C |
+| `GET`  | `/api/v1/org/tokens?range&team` | Team token spend (admin) | P2-C |
+| `POST` | `/api/v1/github/webhook` | GitHub App push/PR webhook (HMAC) | P2-D |
+| `POST` | `/api/v1/github/installations` | Admin: link installation → org | P2-D |
+| `PUT`  | `/api/v1/github/installations/{id}/mode` | Admin: set privacy mode | P2-D |
+| `GET`  | `/api/v1/github/installations` | Admin: list installations | P2-D |
+
+- **Not yet built** (the Phase-3 rows in the table above): `/insights/weekly`,
+  `/query/nl`, `/billing/webhook`.
+- **Known gap vs Phase-2 exit criteria:** there is **no endpoint to SET**
+  `orgs.privacy_level`. It is created at the server default and is only
+  *readable* (`AuthResponse.org.privacy_level`); a setter
+  (e.g. `PATCH /api/v1/org/settings`) is owed by P2-A — see PROGRESS NEEDS.
+
 ---
 
 ## 7. DATABASE CONVENTIONS (frozen)
@@ -175,16 +213,35 @@ Phase 2+). The Phase-1 **local** agent store is a different engine with its own
 conventions — documented as-built in §7.1 below.
 
 - Postgres 16. The `events` table is a **TimescaleDB hypertable** partitioned on
-  `ts_start`. Continuous aggregates produce hourly + daily rollups.
+  `ts_start`. Continuous aggregates produce hourly + daily rollups. **As-built,
+  three continuous aggregates exist (V1):** `events_daily_by_category` and
+  `events_hourly_by_category` (keys: `bucket, org_id, member_id, category`;
+  measures: `total_ms`, `event_count`), and `events_daily_tokens`
+  (`source='token'` only; keys: `bucket, org_id, member_id, model`; measures:
+  `cost_usd, tokens_in, tokens_out`). All are per-member/per-org grain — there is
+  **no per-team aggregate** (team rollups derive by joining `team_members` at
+  query time) and **no commit/github rollup**.
 - All tables have `id uuid primary key default gen_random_uuid()`,
-  `created_at timestamptz not null default now()`.
-- Tenancy: every row that belongs to an org carries `org_id uuid not null`.
-  Row-level security enforced; queries always filter by `org_id`.
+  `created_at timestamptz not null default now()`. **As-built exceptions:**
+  `events` has **no surrogate `id`** (a hypertable needs the partition column in
+  every unique index, so its key is `UNIQUE (event_id, ts_start)`), and
+  `team_members` is a pure join with composite PK `(team_id, member_id)`.
+- Tenancy: every row that belongs to an org carries `org_id uuid not null`
+  (exceptions: `one_time_tokens.org_id` is nullable; `orgs` keys on its own `id`).
+  RLS `org_isolation` is enabled on every org-scoped table, keyed on
+  `current_setting('app.current_org', true)`. **As-built the backend connects as
+  the schema owner (`DATABASE_USER=cadence`), and RLS does not apply to the
+  owner — so today RLS is a _backstop_, and the real tenant guard is the explicit
+  `WHERE org_id = ?` filter on every query** (the continuous aggregates are
+  separate hypertables not covered by base-table RLS, so they rely on the
+  explicit filter too). A non-owner `cadence_app` role is pre-created
+  (`deploy/initdb/00-app-role.sql`) for the production switch to enforced RLS.
 - The async work queue is a table, not SQS:
 
 ```sql
 create table job_queue (
   id           uuid primary key default gen_random_uuid(),
+  org_id       uuid not null references orgs(id) on delete cascade, -- tenancy ext
   kind         text not null,            -- 'categorize' | 'digest' | ...
   payload      jsonb not null,
   status       text not null default 'pending', -- pending|running|done|failed
@@ -195,14 +252,28 @@ create table job_queue (
   created_at   timestamptz not null default now()
 );
 create index on job_queue (status, run_after);
+create index on job_queue (org_id);
 ```
 
-Workers claim jobs with `SELECT ... FOR UPDATE SKIP LOCKED`. This gives us SQS
-semantics with zero extra AWS services.
+`org_id` is the documented tenancy extension (every org-scoped row carries it;
+RLS `org_isolation` applies). Workers claim jobs with `SELECT ... FOR UPDATE SKIP
+LOCKED`. This gives us SQS semantics with zero extra AWS services. **As-built,
+claiming categorize jobs is cross-org** (a worker spans tenants), which cannot
+run under single-org RLS, so it is owed a `claim_categorize_jobs()`
+`SECURITY DEFINER` function — see "owed migrations" below.
 
 - Migrations: Flyway, versioned `V1__init.sql`, `V2__...`. Owned by the spine
   stream of each phase. Other streams **request** a migration via the Build Log;
   they do not write to the migrations folder.
+  **As-built only `V1__init.sql` exists.** Two migrations are *requested but not
+  yet written* by the P2 spine (their consuming code is merged and degrades
+  gracefully until they land):
+  - `V2` **`github_installations`** (`installation_id`→`org_id` + privacy `mode`)
+    — without it P2-D's webhook cannot resolve an org, so **no github/commit
+    events are stored** (NEEDS P2-D→P2-A).
+  - **`claim_categorize_jobs()`** `SECURITY DEFINER` (cross-org claim + stale-lock
+    reclaim, `GRANT EXECUTE` to `cadence_app`) — without it the P2-F worker idles
+    (NEEDS P2-F→P2-A).
 
 ### 7.1 Local agent store (Phase 1, as built)
 
@@ -236,8 +307,15 @@ unchanged.
 
 ## 8. PRIVACY MODEL (frozen)
 
-The privacy policy is per-org and applied **server-side on ingest** and again on
-read. Levels:
+The privacy policy is per-org. **As-built (P2-A user decision): cloud events are
+stored RAW on ingest and redacted server-side on READ** — there is no
+ingest-time redaction (storing raw keeps re-classification and audit possible and
+avoids lossy storage). `com.cadence.query.PrivacyLevel` (P2-A.7) is the
+authoritative read-side enforcement point; `/org/summary` and `/org/tokens`
+return org-level totals under `aggregate_only` and per-member rollups under
+`categories_only`/`full` (per-event app/title/url is stripped for non-`full`
+admin reads). The on-device daemon still applies its own local redaction list
+before sync. Levels:
 
 | Level | What the org admin sees |
 |---|---|

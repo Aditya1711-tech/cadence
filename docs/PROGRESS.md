@@ -278,7 +278,7 @@ protocol §8 the phase gate is not satisfied until those pass.
 - [x] P2-E.4 roster + invites + privacy control
 - [x] P2-E.5 team summary (heatmap/tokens/commits)
 - [x] P2-E.6 member drilldown (privacy-bounded)
-- [ ] P2-E.7 install instructions page
+- [x] P2-E.7 install instructions page
 
 ### P2-F — categorisation worker
 - [ ] P2-F.1 explore escalation rules
@@ -339,6 +339,8 @@ protocol §8 the phase gate is not satisfied until those pass.
 2026-06-28  P2-E.4  done   roster page: BFF proxy routes /api/org/{members,invites} (authedFetch via lib/api/proxy); RosterList (paginated roster + Load more, role/status badges, links to drilldown); InvitePanel (targeted email OR open shareable link w/ maxUses/ttlHours+role -> CreateInviteResponse url+copy+expiry); PrivacyControl READ-ONLY (3 levels w/ trade-offs, current highlighted; disabled per NEEDS set-endpoint); shared ui states/badge/copy-button. lint+build GREEN. commit 030c037
 2026-06-28  P2-E.5  done   team overview: BFF /api/org/summary (range/team passthrough); OverviewBody (range picker 7d default, fetch on change); Heatmap (categories x days, opacity by cell-ms vs busiest, aggregate-only never per-person); CategoryTotals (ranked where-time-went bars); TokenPanel (org tokens aggregated from by_member -> total + per-model; "hidden at aggregate_only" honored); CommitPanel honest "GitHub not connected" stub (NEEDS commit field + P2-D); lib/summary derivations. lint+build GREEN. commit 9c5353c
 2026-06-28  P2-E.6  done   member drilldown /members/[id]: consumes the by_member slice of /org/summary (no new endpoint) -> privacy-bounded BY CONSTRUCTION (category mix + token spend only; never titles/urls/per-event). Header identity from /org/members (limit 1000); reuses CategoryTotals(title) + TokenPanel([rollup]); aggregate_only -> "per-member detail hidden" notice; no-rollup -> "no activity"; back-to-roster + range picker. lint+build GREEN. commit 7aa7b20
+2026-06-28  P2-E.7  done   install page: BFF /api/me/device-codes (deviceLabel as query, not body, per backend); DeviceCodeCard mints one-time enrollment code (copy + expiry) resolving the P1 member_id gap; 3 numbered steps (install agent / enroll device / editor+browser exts) w/ CodeBlock copy. lint+build GREEN (19 routes). Variables block filled. P2-E STREAM COMPLETE (all build tasks [x]); UI-level verification only — full live e2e needs a running backend+DB (Docker), same dev-box limit as P2-A.10. commit 0ab5f2b
+2026-06-28  P2-E     note   STREAM COMPLETE at UI/build level: /web/admin Next 14 app, lint+build GREEN, all P2-E.1-.7 [x]. NOT live-verified end-to-end (no running Spring backend + Timescale on this Windows box; same limit as P2-A.10 / P1-A mac-linux). HANDOFF: run `cd web/admin && npm ci && npm run build` then point CADENCE_API_BASE at a live backend and walk register->invite->accept->install->overview. 3 interim NEEDS still open (set-privacy endpoint, commit-activity field, env-var doc update) — UI degrades honestly until P2-A/P2-D resolve them.
 ```
 
 ---

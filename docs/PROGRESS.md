@@ -5,7 +5,7 @@
 > `[!]` blocked. Every `[x]` must be committed. Resuming sessions read this file
 > and the Build Log only — never the whole codebase.
 
-Last updated: 2026-06-27  ·  by stream: P2-D
+Last updated: 2026-06-28  ·  by stream: P2-D
 
 ---
 
@@ -253,9 +253,9 @@ protocol §8 the phase gate is not satisfied until those pass.
 ### P2-D — github integration
 - [x] P2-D.1 explore App vs OAuth vs PAT
 - [x] P2-D.2 design commit-only vs full-diff toggle
-- [ ] P2-D.3 GitHub App webhook → events
-- [ ] P2-D.4 map github login → member
-- [ ] P2-D.5 respect toggle
+- [x] P2-D.3 GitHub App webhook → events (code+unit-tested; live e2e gated on V2 table + Docker)
+- [x] P2-D.4 map github login → member
+- [x] P2-D.5 respect toggle (full_diff stats-enrichment API call stubbed; default mode complete)
 
 ### P2-E — org admin dashboard
 - [ ] P2-E.1 explore admin needs (trust-first)
@@ -314,6 +314,11 @@ protocol §8 the phase gate is not satisfied until those pass.
 2026-06-27  P2-D     note   START: verified branch in sync w/ origin/master (P2-A.CONTRACT ticked, present). Mapped backend (ingest/tenancy/security/schema): events.source + IngestService.SOURCES already allow 'github'; members.github_login pre-provisioned; Tenancy.bind(orgId,member,role) overload exists for non-JWT webhook context; HMAC via JDK javax.crypto (no new dep for default path).
 2026-06-27  P2-D.1  done   App-vs-OAuth-vs-PAT exploration: DECISION GitHub App (one admin install, whole org; least-privilege metadata:read for default mode; per-install webhooks+tokens). Lifecycle install->webhook->events. Identified the one schema gap (installation_id->org_id) -> NEEDS line to P2-A for V2 github_installations table. Zero-duration github events, deterministic uuid-v5 event_id for redelivery idempotency. backend/docs/exploration/P2-D.1-github-integration-model.md; commit PENDING_EXPL
 2026-06-27  P2-D.2  done   privacy-toggle design: commit_messages_only (default) vs full_diff (opt-in); CODE/PATCH NEVER stored in either mode — full_diff adds numeric diff STATS only (additions/deletions/changed_files). Enforcement primarily by GitHub permission scope (default needs no API calls/contents:read). Per-org mode on github_installations; privacy-safe degradation if contents:read missing. Composes with org privacy_level (read-time P2-A.7 redaction) — no new read code. backend/docs/exploration/P2-D.2-privacy-toggle.md; commit PENDING_EXPL
+2026-06-28  P2-D.3  done   com.cadence.github package: POST /api/v1/github/webhook (HMAC X-Hub-Signature-256 verify via JDK Mac, fail-closed) -> GithubEventMapper (PURE) maps push=1 evt/commit + pull_request(opened/closed/reopened/ready_for_review)=code_review to Event Contract (source=github, zero-duration ts_end=ts_start dur=0, schema_ver=1, url=null, meta.commit_sha/repo/branch[/pr_number/action]); deterministic uuid-v5(repo+sha / repo+pr+action+ts) event_id => redelivery dedupes on (event_id,ts_start). Own @Order(1) SecurityFilterChain for the webhook path only (permitAll) — does NOT edit P2-A SecurityConfig. GithubWebhookService @Transactional: cross-org installation lookup -> tenancy.bind(org) -> map -> resolve member -> JdbcGithubEventStore ON CONFLICT DO NOTHING. application.yml cadence.github.* binds GITHUB_* env. build GREEN, 38 unit tests (sig verify, mapper push/PR/modes, uuid-v5, service orchestration w/ mocked deps). commit PENDING_IMPL
+2026-06-28  P2-D.4  done   github login->member via members.github_login (JdbcGithubMemberResolver: org_id+github_login+status='active'); commits/PRs attributed to commit.author.username / PR sender.login; unmappable author -> event SKIPPED (counted, logged), not stored. Admin link endpoint POST /api/v1/github/installations + GET list + PUT .../mode (GithubInstallationService, admin-only, org-bound) records installation_id->org_id. commit PENDING_IMPL
+2026-06-28  P2-D.5  done   privacy toggle respected: per-install GithubMode; commit_messages_only stores subject+sha+repo+branch (no paths, no API call); full_diff branch wired (mapper derives changed_files COUNT from push file-path array lengths — paths never stored) + GithubStatsEnricher hook; StubGithubStatsEnricher degrades safely (logs, messages-only) — live additions/deletions API call (App-JWT RS256 + contents:read) is the documented TODO per user decision. Code/patch NEVER stored. commit PENDING_IMPL
+2026-06-28  P2-D     note   BUILD/VERIFY: `cd backend && ./gradlew build` GREEN (JDK21 toolchain; 38 unit tests pass; cadence-backend.jar built). Beans instantiate without V2 table (queries lazy), so app still starts. NOT verified here (dev-box limit, same as P2-A.10): live webhook->Postgres insert + RLS + the two-SecurityFilterChain context start — all need (a) P2-A V2 github_installations migration [NEEDS filed] and (b) a Docker host. HANDOFF: after V2 lands, run on a Docker host and add a github integrationTest mirroring E2EIngestQueryIT.
+2026-06-28  P2-D     note   SPINE FOLLOW-UP (phase gate §8): deploy/.env.example (/deploy is spine-owned) lacks GITHUB_APP_ID/GITHUB_APP_PRIVATE_KEY/GITHUB_WEBHOOK_SECRET/GITHUB_DEFAULT_MODE — already in docs/ENV-VARIABLES.md + PHASE-2 P2-D block; please add to .env.example + LOCAL-SETUP GitHub-App registration steps (webhook URL = <base>/api/v1/github/webhook). full_diff also needs GITHUB_APP_ID + GITHUB_APP_PRIVATE_KEY once enrichment is implemented.
 ```
 
 ---

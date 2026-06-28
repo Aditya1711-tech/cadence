@@ -4,15 +4,21 @@ import { formatDuration } from "@/lib/format";
 import { sumMs } from "@/lib/summary";
 import type { CategoryBucket } from "@/lib/contract/types";
 
-/** Where the team's time went — ranked horizontal bars by category. */
-export function CategoryTotals({ totals }: { totals: CategoryBucket[] }) {
+/** Ranked horizontal bars by category — team totals or a single member. */
+export function CategoryTotals({
+  totals,
+  title = "Where time went",
+}: {
+  totals: CategoryBucket[];
+  title?: string;
+}) {
   const ranked = [...totals].sort((a, b) => b.total_ms - a.total_ms);
   const total = sumMs(ranked);
   const max = ranked[0]?.total_ms ?? 0;
 
   return (
     <Card>
-      <CardTitle>Where time went</CardTitle>
+      <CardTitle>{title}</CardTitle>
       {total === 0 ? (
         <p className="text-sm text-slate-500 dark:text-slate-400">
           No activity in this range yet.

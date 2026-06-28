@@ -277,7 +277,7 @@ protocol §8 the phase gate is not satisfied until those pass.
 - [x] P2-E.3 auth pages
 - [x] P2-E.4 roster + invites + privacy control
 - [x] P2-E.5 team summary (heatmap/tokens/commits)
-- [ ] P2-E.6 member drilldown (privacy-bounded)
+- [x] P2-E.6 member drilldown (privacy-bounded)
 - [ ] P2-E.7 install instructions page
 
 ### P2-F — categorisation worker
@@ -338,6 +338,7 @@ protocol §8 the phase gate is not satisfied until those pass.
 2026-06-28  P2-E.3  done   self-contained Next 14 app scaffolded under /web/admin (mirrors P1-D toolchain); BFF + httpOnly-cookie session (lib/api: config/session/backend/problem/auth-bff) w/ invisible refresh-on-401 + cookie rotation; TS contract mirrors (snake_case) of AuthDtos/Summaries; auth routes /api/auth/{login,register,accept,logout,session,invite/[token]}; pages login/register/accept-invite + authenticated (admin) shell (server-read session, nav, privacy banner, logout); middleware route gate. npm run lint + build GREEN (7 routes). USER-CONFIRMED arch=BFF, interim-gaps. commit b84aa10
 2026-06-28  P2-E.4  done   roster page: BFF proxy routes /api/org/{members,invites} (authedFetch via lib/api/proxy); RosterList (paginated roster + Load more, role/status badges, links to drilldown); InvitePanel (targeted email OR open shareable link w/ maxUses/ttlHours+role -> CreateInviteResponse url+copy+expiry); PrivacyControl READ-ONLY (3 levels w/ trade-offs, current highlighted; disabled per NEEDS set-endpoint); shared ui states/badge/copy-button. lint+build GREEN. commit 030c037
 2026-06-28  P2-E.5  done   team overview: BFF /api/org/summary (range/team passthrough); OverviewBody (range picker 7d default, fetch on change); Heatmap (categories x days, opacity by cell-ms vs busiest, aggregate-only never per-person); CategoryTotals (ranked where-time-went bars); TokenPanel (org tokens aggregated from by_member -> total + per-model; "hidden at aggregate_only" honored); CommitPanel honest "GitHub not connected" stub (NEEDS commit field + P2-D); lib/summary derivations. lint+build GREEN. commit 9c5353c
+2026-06-28  P2-E.6  done   member drilldown /members/[id]: consumes the by_member slice of /org/summary (no new endpoint) -> privacy-bounded BY CONSTRUCTION (category mix + token spend only; never titles/urls/per-event). Header identity from /org/members (limit 1000); reuses CategoryTotals(title) + TokenPanel([rollup]); aggregate_only -> "per-member detail hidden" notice; no-rollup -> "no activity"; back-to-roster + range picker. lint+build GREEN. commit 7aa7b20
 ```
 
 ---

@@ -16,6 +16,9 @@ spring:
     hikari:
       pool-name: cadence-app
       maximum-pool-size: 20
+  data:
+    redis:
+      url: ${REDIS_URL:redis://localhost:6379}   # P2-F pattern cache + token cap
   flyway:
     enabled: true
     locations: classpath:db/migration
@@ -47,6 +50,15 @@ cadence:
     private-key: ${GITHUB_APP_PRIVATE_KEY:}  # PEM, base64; full_diff only
     webhook-secret: ${GITHUB_WEBHOOK_SECRET:}
     default-mode: ${GITHUB_DEFAULT_MODE:commit_messages_only}
+  categorize:                          # P2-F categorisation worker
+    enabled: ${CADENCE_CATEGORIZE_ENABLED:false}   # off unless ANTHROPIC_API_KEY+Redis present
+    model: ${CADENCE_CATEGORIZE_MODEL:claude-haiku-4-5}
+    daily-token-cap: ${CADENCE_CATEGORIZE_DAILY_TOKEN_CAP:0}   # per-org/day; 0 = unlimited
+    poll-interval-ms: ${CADENCE_CATEGORIZE_POLL_MS:2000}
+    batch-size: ${CADENCE_CATEGORIZE_BATCH:20}     # keep <= datasource pool size
+    max-attempts: ${CADENCE_CATEGORIZE_MAX_ATTEMPTS:5}
+    max-output-tokens: ${CADENCE_CATEGORIZE_MAX_OUTPUT_TOKENS:256}
+    cache-ttl-days: ${CADENCE_CATEGORIZE_CACHE_TTL_DAYS:30}
 
 management:
   endpoints:

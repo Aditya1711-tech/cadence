@@ -86,6 +86,18 @@ NEEDS  P2-F -> P2-A : extend ingest to ALSO enqueue a categorize job when an eve
           'other'). NON-BLOCKING for P2-F: the worker re-checks category on claim
           and only calls the LLM for null/other, so it is correct under either
           trigger; this NEEDS only changes throughput. Rationale: P2-F.1 doc.
+NEEDS  P2-F -> P2-A : add a SECURITY DEFINER claim function to the migrations
+          (P2-F can't write migrations). Claiming categorize jobs is CROSS-ORG, so
+          it can't run under RLS with a single org bound (default-deny when
+          app.current_org unset). Exact SQL (also reclaims stale 'running' locks +
+          GRANT EXECUTE to cadence_app) is in backend/docs/P2-F-worker.md
+          "DEPENDENCY". Per-job reads/writes afterwards run as cadence_app with org
+          bound (RLS enforced). BLOCKS the worker's LIVE path only; build/tests are
+          green without it (worker logs a claim warning and idles).
+NEEDS  P2-F -> P2-A (deploy) : wire CADENCE_CATEGORIZE_ENABLED=true + ANTHROPIC_API_KEY
+          (and optional CADENCE_CATEGORIZE_*) into the backend service in
+          deploy/docker-compose.yml. Redis 7 is already present (P2-A.9); the
+          worker reads spring.data.redis.url from REDIS_URL.
 NOTE   P2-A -> ALL  : auth contract for clients — Authorization: Bearer <access JWT>
           (HS256, 60m); refresh via POST /auth/refresh {refresh_token} (rotating;
           reuse revokes the family). Ingest=POST /api/v1/ingest/events (array<=1000,
@@ -293,9 +305,9 @@ protocol §8 the phase gate is not satisfied until those pass.
 ### P2-F — categorisation worker
 - [x] P2-F.1 explore escalation rules
 - [x] P2-F.2 prompt design (fixed enum out)
-- [ ] P2-F.3 worker claims jobs + LLM call + write-back
-- [ ] P2-F.4 pattern cache
-- [ ] P2-F.5 cost guardrails + metrics
+- [x] P2-F.3 worker claims jobs + LLM call + write-back (build+unit green; live e2e deferred — no Docker/Redis/API key here)
+- [x] P2-F.4 pattern cache
+- [x] P2-F.5 cost guardrails + metrics
 
 **Build Log — Phase 2**
 ```
@@ -354,6 +366,10 @@ protocol §8 the phase gate is not satisfied until those pass.
 2026-06-27  P2-F     note   START P2-F (worker -> com.cadence.worker pkg). Rebased on origin/master (up to date, e5af75a). Read P2-A as-built: IngestService enqueues categorize jobs ONLY for category==null; device rule classifier (P1-A.7) defaults unmatched->'other', so null-only never surfaces low-confidence events. job_queue payload {event_id,ts_start}+row org_id confirmed sufficient.
 2026-06-27  P2-F.1  done   escalation rules: escalate when category null OR 'other' (other = rule classifier's explicit give-up); never re-categorise the 7 specific cats. Worker re-checks on claim so trigger is throughput-only, not correctness. Cost layers: device rules + pattern cache + per-org daily cap + claim batching. Failure=best-effort (default other, never block). Filed NEEDS P2-F->P2-A (ingest enqueue 'other' too). doc backend/docs/exploration/P2-F.1-escalation-rules.md; commit 3a7b5e7
 2026-06-27  P2-F.2  done   prompt/model: official Anthropic Java SDK, claude-haiku-4-5 (CADENCE_CATEGORIZE_MODEL), no thinking/effort (Haiku lacks effort). Force fixed 8-enum via strict tool use/structured output (+ defensive other fallback). System prompt = stable cacheable role+category defs; user msg = structured signals (source/app/title/url/project/is_idle/duration) mirroring device ruleset. Cache key source|app|norm-title|url-host. Privacy: reads raw (store-raw/redact-on-read), notes app/title/url leave box for LLM. doc backend/docs/exploration/P2-F.2-prompt-design.md; commit 3a7b5e7
+2026-06-28  P2-F.3  done   worker (com.cadence.worker): CategorizeWorker @Scheduled claims a batch via claim_categorize_jobs() (FOR UPDATE SKIP LOCKED, cross-org) -> virtual-thread fan-out; JobProcessor per job: load event (RLS-bound) -> re-check null/other (skip specific) -> cache -> cap -> AnthropicCategorizer (structured output -> 8-enum) -> writeAndComplete. LLM call BETWEEN short txns (no held conn). Best-effort: backoff retry then failed; cap=defer. NEEDS P2-F->P2-A SECURITY DEFINER claim fn (cross-org RLS) + deploy env. build+33 unit green; live e2e deferred. doc backend/docs/P2-F-worker.md; commit <pending>
+2026-06-28  P2-F.4  done   pattern cache: RedisPatternCache (StringRedisTemplate, per-org keyed, TTL cache-ttl-days). Key=source|app|norm-title(drop ' — project' suffix)|url-host so app/title repeats + same-file re-opens never re-hit the LLM. PatternCacheKeyTest covers normalisation. commit <pending>
+2026-06-28  P2-F.5  done   guardrails+metrics: RedisDailyTokenCap per-org/UTC-day budget (CADENCE_CATEGORIZE_DAILY_TOKEN_CAP; 0=unlimited; exhausted=defer/soft-degrade, never fail). Micrometer counters cadence.categorize.{jobs[result],cache[outcome],llm.calls,llm.tokens} via actuator. commit <pending>
+2026-06-28  P2-F     note   deps added (build.gradle.kts): spring-boot-starter-data-redis + com.anthropic:anthropic-java:2.34.0. config (application.yml): spring.data.redis.url + cadence.categorize.*. Whole worker stack @ConditionalOnProperty(cadence.categorize.enabled=true), default false -> dev box (no API key/Redis/Docker) boots backend untouched & build stays green. Phase-2 P2-F Variables block filled.
 ```
 
 ---

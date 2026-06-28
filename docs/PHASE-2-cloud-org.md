@@ -213,10 +213,23 @@ NEXT_PUBLIC_API_BASE=https://api.<yourdomain>   # or http://localhost:8080
 
 ### Variables to set
 ```
-ANTHROPIC_API_KEY=
+# Worker is OFF unless explicitly enabled (so a box without a key/Redis runs the
+# rest of the backend untouched). Set true on the deploy backend service.
+CADENCE_CATEGORIZE_ENABLED=false
+ANTHROPIC_API_KEY=                      # read from env by the Anthropic SDK
 CADENCE_CATEGORIZE_MODEL=claude-haiku-4-5
-CADENCE_CATEGORIZE_DAILY_TOKEN_CAP=
+CADENCE_CATEGORIZE_DAILY_TOKEN_CAP=0    # per org per day; 0 = unlimited
+# Tuning (sensible defaults; rarely overridden):
+CADENCE_CATEGORIZE_POLL_MS=2000
+CADENCE_CATEGORIZE_BATCH=20             # keep <= datasource pool size (20)
+CADENCE_CATEGORIZE_MAX_ATTEMPTS=5
+CADENCE_CATEGORIZE_MAX_OUTPUT_TOKENS=256
+CADENCE_CATEGORIZE_CACHE_TTL_DAYS=30
+# Pattern cache + token cap use Redis (already in the stack):
+REDIS_URL=redis://localhost:6379
 ```
+> Requires a `claim_categorize_jobs` SECURITY DEFINER migration from P2-A
+> (cross-org claim under RLS) — see backend/docs/P2-F-worker.md + PROGRESS NEEDS.
 
 ---
 

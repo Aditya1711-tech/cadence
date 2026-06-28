@@ -30,6 +30,11 @@ dependencies {
     implementation("org.flywaydb:flyway-database-postgresql")
     runtimeOnly("org.postgresql:postgresql")
 
+    // P2-F (categorisation worker): Redis-backed pattern cache + daily token cap,
+    // and the official Anthropic Java SDK for LLM categorisation.
+    implementation("org.springframework.boot:spring-boot-starter-data-redis")
+    implementation("com.anthropic:anthropic-java:2.34.0")
+
     // Self-issued JWT (HS256). jjwt — pure-Java, no extra service (§3 self-issued).
     implementation("io.jsonwebtoken:jjwt-api:0.12.6")
     runtimeOnly("io.jsonwebtoken:jjwt-impl:0.12.6")

@@ -235,9 +235,9 @@ protocol §8 the phase gate is not satisfied until those pass.
 ### P2-C — token watcher
 - [x] P2-C.1 explore tool log locations/formats
 - [x] P2-C.2 confirm counts-only (no content)
-- [ ] P2-C.3 per-tool parsers → events
-- [ ] P2-C.4 incremental tail + project attribution
-- [ ] P2-C.5 backend cost aggregation
+- [x] P2-C.3 per-tool parsers → events
+- [x] P2-C.4 incremental tail + project attribution
+- [x] P2-C.5 backend cost aggregation (code+unit-tests green; live Timescale query HANDOFF, no Docker here)
 
 ### P2-D — github integration
 - [ ] P2-D.1 explore App vs OAuth vs PAT
@@ -294,6 +294,12 @@ protocol §8 the phase gate is not satisfied until those pass.
 2026-06-27  P2-C.2  done   counts-only confirmed ENFORCEABLE: both logs contain full conversation text in the same files, so privacy = extract an ALLOW-LIST of fields (ts/model/tokens/cost/project) per line, never a deny-list; message.content/base_instructions/tool args dropped at decode; token events carry null title/url so safe at every privacy level; sentinel test guards against content capture. Doc agent/token/docs/P2-C.2-counts-only-privacy.md; commit <pending>
 2026-06-27  P2-C     note   P2-C.5 SCOPE: P2-A ALREADY built the token aggregation primitives in ITS owned code — CAGG events_daily_tokens (per org/member/model/day cost+tokens, tagged "P2-C.5") in V1__init.sql + per-model TokenSummary in /me/summary & /org/summary (MeQueryService/OrgQueryService query raw events where source='token'). So P2-C.5's non-overlapping value = a dedicated per-member/model/DAY token endpoint under com.cadence.token backed by events_daily_tokens (currently it has NO consumer), feeding the P2-E admin token panel. Will NOT duplicate or edit P2-A's query package.
 2026-06-27  P2-C     note   INTEGRATION PLAN (pre-impl, pending user OK): collector ships as a self-contained package agent/token + standalone runnable agent/token/cmd/cadence-token that POSTs to the daemon loopback /events (no P1-A changes needed, independently testable). Eventual in-daemon wiring (one line in agent/cmd/cadence-agent/main.go, P1-A-owned) filed as a NEEDS line below.
+2026-06-28  P2-C     note   USER DECISIONS (Wave-1 kickoff Q): (1) P2-C.5 backend = NEW per-day token endpoint under com.cadence.token reading events_daily_tokens (no edits to P2-A query pkg); (2) collector = standalone runnable + NEEDS wire (no main.go edit now).
+2026-06-28  P2-C.3  done   agent/token Go pkg: per-tool parsers (Claude Code + Codex) -> Event Contract source:"token" events w/ meta.model/tokens_in/tokens_out/cost_usd (+raw cache sub-counts, priced flag). Narrow allow-list decode (no message.content/base_instructions field) enforces counts-only (P2-C.2); sentinel test guards. Config-driven per-model pricing (pricing.go; Anthropic 4-tier, OpenAI cached-subset; DefaultTable rates from claude-api skill; CADENCE_TOKEN_PRICING_PATH overlay). Cursor=server-side limit; Cursor tool deferred (server-side only). go build/vet/test green, cross-compiles mac/linux; commit <pending>
+2026-06-28  P2-C.4  done   incremental tail (watcher.go): per-file byte-offset cursor persisted token-cursors.json (no reparse/double-count across restarts), reads only complete lines, rotation-safe; project attributed from cwd basename; 30s poll; sink-failure retries chunk (cursor advances only on accept). Codex parser stateful per-file (carries cwd/model across chunks). LIVE e2e vs real daemon: 2 Claude Code turns -> /timeline shows correct model/tokens/cost (opus 0.080805, sonnet 0.006000), null title/url, project=cadence, NO content leak; see agent/token/docs/P2-C-verification.md; commit <pending>
+2026-06-28  P2-C.5  done   com.cadence.token: GET /me/tokens?range + GET /org/tokens?range&team (admin, privacy-aware) reading events_daily_tokens CAGG (P2-A defined it, no prior consumer); explicit org_id filter (CAGG not RLS-covered, per schema note); aggregate_only -> org daily totals, no by_member. NO edits to P2-A query/ingest pkgs. Shapes TokenDtos.*; gradle build GREEN + wire/range unit tests (TokenWireAndRangeTest, 3). LIVE Timescale query HANDOFF (no Docker here; same limit as P2-A.10); commit <pending>
+2026-06-28  P2-C     note   ENV VARS added by P2-C (for spine to fold into phase-doc Variables + ENV-VARIABLES.md): CADENCE_TOKEN_SOURCES (default claude_code,codex,cursor; cursor recognized but not locally tailed), CADENCE_CLAUDE_CODE_LOG_DIR + CADENCE_CODEX_LOG_DIR (optional log-dir overrides), CADENCE_CODEX_DEFAULT_MODEL (default gpt-5-codex), CADENCE_TOKEN_PRICING_PATH (JSON price overlay), CADENCE_TOKEN_STATE_DIR (cursor file dir; default OS config dir). Reuses CADENCE_AGENT_PORT/CADENCE_MEMBER_ID/CADENCE_KEYCHAIN_SERVICE from P1-A. No backend env vars added (endpoints reuse P2-A datasource).
+2026-06-28  P2-C     note   STREAM COMPLETE (build tasks): P2-C.1-.5 all [x]. Runtime-deferred like the rest of Phase-2: backend token endpoints need a Docker host for live Timescale verification; Codex parser path verified by unit tests + on-disk format (no Codex run on this box).
 ```
 
 ---

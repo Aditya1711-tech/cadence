@@ -5,7 +5,7 @@
 > `[!]` blocked. Every `[x]` must be committed. Resuming sessions read this file
 > and the Build Log only — never the whole codebase.
 
-Last updated: 2026-06-28  ·  by stream: DOCS (Phase-2 as-built audit + reconcile)
+Last updated: 2026-06-28  ·  by stream: P2-D (V2 migration + /org/summary commit facet)
 
 ---
 
@@ -28,17 +28,29 @@ OPEN   P2-C -> P1-A : wire the token watcher into the daemon — one call in
           standalone runnable agent/token/cmd/cadence-token that POSTs to the
           same loopback /events route, so no P1-A change blocks P2-C. Adopt the
           in-daemon wire when P1-A resumes (mac/linux handoff session).
-NEEDS  P2-D -> P2-A : V2 migration for installation->org mapping. New org-scoped
-          (RLS) table github_installations(id, org_id->orgs, installation_id
-          bigint UNIQUE, account_login text, mode text default
-          'commit_messages_only' CHECK in ('commit_messages_only','full_diff'),
-          suspended_at, created_at) + idx on org_id + enable RLS w/ org_isolation
-          policy on org_id. Reason: a GitHub webhook arrives keyed only by GitHub
-          installation_id; we must resolve org_id (+ privacy mode) before
-          inserting source='github' events. members.github_login already covers
-          github-user->member. Nice-to-have: partial UNIQUE(org_id,github_login)
-          WHERE github_login IS NOT NULL on members. Full proposed DDL +
-          cross-org-lookup note in backend/docs/exploration/P2-D.1-github-integration-model.md §4.
+RESOLVED  P2-D -> P2-A : V2 migration for installation->org mapping. Written as
+          backend/migrations/V2__github_installations.sql (spine GitHub follow-up):
+          github_installations(id, org_id->orgs CASCADE, installation_id bigint
+          UNIQUE, account_login, mode default 'commit_messages_only' CHECK
+          in ('commit_messages_only','full_diff'), suspended_at, created_at) +
+          idx_github_inst_org + RLS enable w/ org_isolation policy on org_id
+          (not FORCEd; cross-org webhook lookup rides the owner connection, same
+          door as auth). Plus the nice-to-have partial UNIQUE(org_id,github_login)
+          WHERE github_login IS NOT NULL on members, and idx_events_org_source_ts
+          to back the /org/summary commit facet. Runs transactionally (no CAGGs;
+          no .conf). APPLY + live e2e gated on a Docker host (see HANDOFF).
+HANDOFF  P2-D live GitHub App registration + webhook e2e — do at the end-of-phase
+          AWS deploy step (needs a public backend URL for the webhook). Register
+          the Cadence GitHub App (least-privilege: Repository permission
+          Metadata:Read-only for the default commit_messages_only mode — zero code
+          access; add Contents:Read-only ONLY for full_diff). Subscribe events:
+          Push, Pull request, Installation, Installation repositories. Webhook URL
+          = <backend-base>/api/v1/github/webhook; set GITHUB_WEBHOOK_SECRET (the
+          only credential the default path needs) and, for full_diff only,
+          GITHUB_APP_ID + GITHUB_APP_PRIVATE_KEY (base64 PEM). Then on a Docker
+          host: apply V2, link an installation (POST /api/v1/github/installations),
+          push to a selected repo, confirm source='github' events land and the
+          /org/summary commits facet counts them. Mirror E2EIngestQueryIT.
 
 RESOLVED  P2-E -> P2-A : /org/summary returns org_by_day[] (per-day per-category
           buckets) + org_totals_by_category[] + by_member[] (privacy-bounded).
@@ -47,10 +59,15 @@ NEEDS  P2-E -> P2-A : an admin-guarded endpoint to SET orgs.privacy_level (e.g.
           PATCH /api/v1/org/settings {privacyLevel}). Today the level is only
           READABLE (AuthResponse.org.privacyLevel); P2-E.4 privacy-level control
           needs to change it. INTERIM: privacy control is read-only in the UI.
-NEEDS  P2-E -> P2-A (+depends P2-D) : commit activity in /org/summary (e.g. a
-          commits block w/ per-member/per-day commit counts from source:github
-          events). Not in OrgSummary today; P2-D github ingestion is unbuilt.
-          INTERIM: the P2-E.5 commit panel renders a "GitHub not connected" state.
+RESOLVED  P2-E -> P2-A (+depends P2-D) : commit activity in /org/summary. Added
+          as an ADDITIVE `commits` facet on Summaries.OrgSummary (P2-D, spine
+          GitHub follow-up): { total, by_day:[{date,count}],
+          by_member:[{member_id,display_name,count}] } counting source='github'
+          commit events (meta.commit_sha present; PR/code_review excluded).
+          by_member omitted under aggregate_only; org-level total/by_day at every
+          level. Wire shape documented in 00-SYSTEM-KNOWLEDGE.md §6. P2-E.5 +
+          P3-A: read commits from /org/summary (one rollup, no second endpoint);
+          drop the "GitHub not connected" interim once an installation is linked.
 NOTE   P2-E -> spine : env correction — phase-doc P2-E var NEXT_PUBLIC_API_BASE
           is build-time-inlined by Next and can't be set per deploy. The admin app
           talks to the backend SERVER-SIDE via a BFF proxy (no CORS change needed),
@@ -317,9 +334,10 @@ NEEDS/HANDOFF; this audit only confirms them against the as-built code.
 ### P2-D — github integration
 - [x] P2-D.1 explore App vs OAuth vs PAT
 - [x] P2-D.2 design commit-only vs full-diff toggle
-- [x] P2-D.3 GitHub App webhook → events (code+unit-tested; live e2e gated on V2 table + Docker)
+- [x] P2-D.3 GitHub App webhook → events (code+unit-tested; V2 migration written; live e2e gated on Docker host)
 - [x] P2-D.4 map github login → member
 - [x] P2-D.5 respect toggle (full_diff stats-enrichment API call stubbed; default mode complete)
+- [x] P2-D.6 V2 github_installations migration + /org/summary commit facet (spine GitHub follow-up; build+unit green; APPLY+e2e Docker handoff)
 
 ### P2-E — org admin dashboard
 - [x] P2-E.1 explore admin needs (trust-first)
@@ -398,7 +416,10 @@ NEEDS/HANDOFF; this audit only confirms them against the as-built code.
 2026-06-28  P2-F.4  done   pattern cache: RedisPatternCache (StringRedisTemplate, per-org keyed, TTL cache-ttl-days). Key=source|app|norm-title(drop ' — project' suffix)|url-host so app/title repeats + same-file re-opens never re-hit the LLM. PatternCacheKeyTest covers normalisation. commit 3457faf
 2026-06-28  P2-F.5  done   guardrails+metrics: RedisDailyTokenCap per-org/UTC-day budget (CADENCE_CATEGORIZE_DAILY_TOKEN_CAP; 0=unlimited; exhausted=defer/soft-degrade, never fail). Micrometer counters cadence.categorize.{jobs[result],cache[outcome],llm.calls,llm.tokens} via actuator. commit 3457faf
 2026-06-28  P2-F     note   deps added (build.gradle.kts): spring-boot-starter-data-redis + com.anthropic:anthropic-java:2.34.0. config (application.yml): spring.data.redis.url + cadence.categorize.*. Whole worker stack @ConditionalOnProperty(cadence.categorize.enabled=true), default false -> dev box (no API key/Redis/Docker) boots backend untouched & build stays green. Phase-2 P2-F Variables block filled.
-2026-06-28  DOCS    done   audit as-built Phase-2 cloud vs frozen §6/§7/§8 (code = ground truth, no backend code changed). §6: documented as-built idempotency key (event_id,ts_start), ingest/list response envelopes, the 15 P2 routes beyond the frozen table, and the missing privacy-level setter. §7: named the 3 CAGGs + their grain (per member/org, no per-team/commit rollup), events/team_members PK exceptions, RLS-is-a-backstop-while-app-runs-as-owner reality, job_queue org_id, and the two owed migrations (V2 github_installations, claim_categorize_jobs). §8: store-raw/redact-on-read. Filled real values into PHASE-2 Variables blocks (P2-B sync-db, P2-C codex/pricing, P2-E CADENCE_API_BASE) + ENV-VARIABLES (JDBC scheme, SMTP, categorize tuning, web BFF var) + deploy/.env.example (github+categorize). Recorded Phase-2 exit-criteria audit above. Reported PHASE-3 READINESS (P3-A facts from CAGGs; commits+fragmentation are gaps; P3-C needs a read-only org-scoped role — none exists; token events confirmed counts/cost/model only). commit <pending>
+2026-06-28  DOCS    done   audit as-built Phase-2 cloud vs frozen §6/§7/§8 (code = ground truth, no backend code changed). §6: documented as-built idempotency key (event_id,ts_start), ingest/list response envelopes, the 15 P2 routes beyond the frozen table, and the missing privacy-level setter. §7: named the 3 CAGGs + their grain (per member/org, no per-team/commit rollup), events/team_members PK exceptions, RLS-is-a-backstop-while-app-runs-as-owner reality, job_queue org_id, and the two owed migrations (V2 github_installations, claim_categorize_jobs). §8: store-raw/redact-on-read. Filled real values into PHASE-2 Variables blocks (P2-B sync-db, P2-C codex/pricing, P2-E CADENCE_API_BASE) + ENV-VARIABLES (JDBC scheme, SMTP, categorize tuning, web BFF var) + deploy/.env.example (github+categorize). Recorded Phase-2 exit-criteria audit above. Reported PHASE-3 READINESS (P3-A facts from CAGGs; commits+fragmentation are gaps; P3-C needs a read-only org-scoped role — none exists; token events confirmed counts/cost/model only). commit 144cbed
+2026-06-28  P2-D     note   RESUME (Phase-2 cleanup before P3): finishing the spine's owed GitHub work. Read as-built com.cadence.github (webhook->event mapping, github_login->member resolver, mode toggle all built+unit-tested) + V1 schema (no github_installations table -> root cause commits never land e2e). Plan reviewed w/ user: (1) write owed V2 migration; (2) surface commits in /org/summary as an ADDITIVE facet (user-approved contract extension, not silent edit); (3) live App registration deferred to deploy (fixture-verify now).
+2026-06-28  P2-D.6  done   wrote backend/migrations/V2__github_installations.sql (github_installations + RLS org_isolation, idx_github_inst_org, partial uq_members_org_github, idx_events_org_source_ts; transactional, no .conf) — unblocks the installation->org lookup so source='github' events land. Surfaced commit activity in /org/summary: ADDITIVE Summaries.OrgSummary.commits facet {total,by_day,by_member} counting source='github' commit events (meta.commit_sha; PR/code_review excluded), by_member hidden under aggregate_only — only Summaries.java + OrgQueryService.java touch com.cadence.query (spine GitHub authority); webhook/migration stay in com.cadence.github. Documented §6 (additive contract) + Coordination (P2-E/P3-A read commits from the one rollup) + HANDOFF (live App registration at deploy). `./gradlew test` GREEN (mapper push-fixture parse tests + new QueryLogicTest.orgSummaryCarriesAdditiveCommitFacet snake_case wire assertion). APPLY + live webhook e2e = Docker handoff (same dev-box limit as P2-A.10). commit <pending>
+
 ```
 
 ---

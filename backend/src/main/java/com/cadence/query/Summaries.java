@@ -45,7 +45,29 @@ public final class Summaries {
             UUID memberId, String displayName,
             List<CategoryBucket> byCategory, TokenSummary tokens) {}
 
-    /** GET /org/summary — honors the org privacy_level. */
+    /** One day's commit count (org-level or per-member), source='github'. */
+    public record DayCount(LocalDate date, long count) {}
+
+    /** A member's commit count over the window, source='github'. */
+    public record MemberCommits(UUID memberId, String displayName, long count) {}
+
+    /**
+     * Commit-activity facet of /org/summary (P2-D). Counts {@code source='github'}
+     * commit events (those carrying {@code meta.commit_sha}; PR/code_review events
+     * are excluded). GitHub events are zero-duration, so commits live in their own
+     * facet rather than the time-by-category rollups. {@code byMember} is omitted
+     * under {@code aggregate_only}; the org-level {@code total}/{@code byDay}
+     * aggregates are returned at every privacy level.
+     */
+    public record CommitActivity(long total, List<DayCount> byDay, List<MemberCommits> byMember) {}
+
+    /**
+     * GET /org/summary — honors the org privacy_level.
+     *
+     * <p>The {@code commits} field is an ADDITIVE P2-D contract extension (commit
+     * activity as a first-class fact alongside time + tokens). Existing readers
+     * that ignore it are unaffected; see 00-SYSTEM-KNOWLEDGE.md §6.
+     */
     public record OrgSummary(
             java.time.OffsetDateTime from,
             java.time.OffsetDateTime to,
@@ -53,5 +75,6 @@ public final class Summaries {
             String privacyLevel,
             List<CategoryBucket> orgTotalsByCategory,
             List<DayBucket> orgByDay,
-            List<MemberRollup> byMember) {}
+            List<MemberRollup> byMember,
+            CommitActivity commits) {}
 }

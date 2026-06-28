@@ -98,10 +98,30 @@ public class OrgQueryService {
                 GROUP BY 1,2 ORDER BY 1
                 """, dayArgs.toArray());
 
+        // Commit-activity facet (P2-D, additive). Counts source='github' commit
+        // events (meta.commit_sha present) — PR/code_review events are excluded.
+        // Org-level total + per-day counts are aggregates, returned at every
+        // privacy level. NOTE: the `?` jsonb operator clashes with JdbcTemplate
+        // bind markers, so we test commit_sha via `->>' ... ' IS NOT NULL`.
+        List<Object> cDayArgs = new ArrayList<>(List.of(p.orgId(), f, t));
+        if (team != null) cDayArgs.add(team);
+        List<Summaries.DayCount> commitsByDay = jdbc.query("""
+                SELECT (ts_start AT TIME ZONE 'UTC')::date AS day, count(*) AS n
+                FROM events
+                WHERE org_id = ? AND source = 'github' AND meta->>'commit_sha' IS NOT NULL
+                  AND ts_start >= ? AND ts_start < ? """ + teamFilter + """
+                GROUP BY 1 ORDER BY 1
+                """, (rs, i) -> new Summaries.DayCount(
+                        rs.getObject("day", java.time.LocalDate.class), rs.getLong("n")),
+                cDayArgs.toArray());
+        long commitTotal = commitsByDay.stream().mapToLong(Summaries.DayCount::count).sum();
+
         // aggregate_only: org-level daily totals only, no per-member breakdown.
         if (level == PrivacyLevel.AGGREGATE_ONLY) {
+            Summaries.CommitActivity commits =
+                    new Summaries.CommitActivity(commitTotal, commitsByDay, null);
             return new Summaries.OrgSummary(w.from(), w.to(), teamId, level.wire(),
-                    orgByCat, orgByDay, null);
+                    orgByCat, orgByDay, null, commits);
         }
 
         // full / categories_only: per-member category + token rollups.
@@ -140,8 +160,25 @@ public class OrgQueryService {
             byMember.add(new Summaries.MemberRollup(mid, names.get(mid), entry.getValue(), tokens));
         }
 
+        // Per-member commit counts (full / categories_only only).
+        List<Object> cMemArgs = new ArrayList<>(List.of(p.orgId(), f, t));
+        if (team != null) cMemArgs.add(team);
+        List<Summaries.MemberCommits> commitsByMember = jdbc.query("""
+                SELECT e.member_id, m.display_name, count(*) AS n
+                FROM events e JOIN members m ON m.id = e.member_id
+                WHERE e.org_id = ? AND e.source = 'github' AND e.meta->>'commit_sha' IS NOT NULL
+                  AND e.ts_start >= ? AND e.ts_start < ? """ +
+                (team == null ? "" : " AND e.member_id IN (SELECT member_id FROM team_members WHERE team_id = ?) ") + """
+                GROUP BY e.member_id, m.display_name
+                ORDER BY n DESC
+                """, (rs, i) -> new Summaries.MemberCommits(
+                        rs.getObject("member_id", UUID.class), rs.getString("display_name"), rs.getLong("n")),
+                cMemArgs.toArray());
+        Summaries.CommitActivity commits =
+                new Summaries.CommitActivity(commitTotal, commitsByDay, commitsByMember);
+
         return new Summaries.OrgSummary(w.from(), w.to(), teamId, level.wire(),
-                orgByCat, orgByDay, byMember);
+                orgByCat, orgByDay, byMember, commits);
     }
 
     private void requireAdmin(AuthPrincipal p) {

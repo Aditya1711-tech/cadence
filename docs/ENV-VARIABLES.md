@@ -62,9 +62,9 @@ Legend — **Where:** `agent` (local daemon), `backend` (Spring on box),
 | `CADENCE_CODEX_DEFAULT_MODEL` | agent | `gpt-5-codex` | Model when a Codex log line omits it. |
 | `CADENCE_TOKEN_PRICING_PATH` | agent | _(unset)_ | Optional JSON per-model price overlay (cost is computed from tokens). |
 | `CADENCE_TOKEN_STATE_DIR` | agent | _(unset)_ | Tail-cursor dir; default OS config dir. |
-| `GITHUB_APP_ID` | backend | | Required for `full_diff` enrichment. |
-| `GITHUB_APP_PRIVATE_KEY` | backend | `<base64 PEM>` | |
-| `GITHUB_WEBHOOK_SECRET` | backend | | HMAC verify of `/github/webhook`. |
+| `GITHUB_APP_ID` | backend | | `full_diff` only (mints installation tokens for diff-stats). Deploy-time. |
+| `GITHUB_APP_PRIVATE_KEY` | backend | `<base64 PEM>` | `full_diff` only. Deploy-time. |
+| `GITHUB_WEBHOOK_SECRET` | backend | | Only credential the default `commit_messages_only` path needs (HMAC verify of `/github/webhook`). Deploy-time. |
 | `GITHUB_DEFAULT_MODE` | backend | `commit_messages_only` | Never default to code. |
 | `CADENCE_API_BASE` | web | `http://localhost:8080` | **Admin BFF → backend, runtime** (mirrors the P1-D fix). `NEXT_PUBLIC_API_BASE` is a build-inlined last-resort fallback only. |
 | `ANTHROPIC_API_KEY` | backend | `sk-...` | Read by the Anthropic SDK; shared across AI features. |
@@ -76,6 +76,14 @@ Legend — **Where:** `agent` (local daemon), `backend` (Spring on box),
 | `CADENCE_CATEGORIZE_MAX_ATTEMPTS` | backend | `5` | Then mark job `failed`. |
 | `CADENCE_CATEGORIZE_MAX_OUTPUT_TOKENS` | backend | `256` | |
 | `CADENCE_CATEGORIZE_CACHE_TTL_DAYS` | backend | `30` | Pattern-cache TTL. |
+
+> **GitHub App (P2-D):** the App is registered at the end-of-phase deploy step
+> (it needs a public webhook URL = `<backend-base>/api/v1/github/webhook`). Until
+> then the `GITHUB_*` vars stay empty; the backend boots fine and the webhook
+> receiver rejects unsigned calls. Least privilege: Repository permission
+> `Metadata: Read-only` for the default mode (**zero code access**); add
+> `Contents: Read-only` only to enable `full_diff`. Subscribe events: Push,
+> Pull request, Installation, Installation repositories.
 
 ---
 

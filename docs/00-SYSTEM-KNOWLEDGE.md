@@ -204,6 +204,24 @@ Base path: `/api/v1`. JSON only. Auth via `Authorization: Bearer <jwt>`.
   *readable* (`AuthResponse.org.privacy_level`); a setter
   (e.g. `PATCH /api/v1/org/settings`) is owed by P2-A — see PROGRESS NEEDS.
 
+**Additive contract extension (P2-D, GitHub):** `GET /org/summary` carries a
+`commits` facet — commit activity as a first-class fact alongside time and
+tokens, so P2-E and P3-A read one coherent rollup (not a second endpoint):
+
+```jsonc
+"commits": {
+  "total":     12,
+  "by_day":    [ { "date": "2026-06-27", "count": 5 } ],
+  "by_member": [ { "member_id": "uuid", "display_name": "Octo Dev", "count": 5 } ]
+}
+```
+
+It counts `source='github'` commit events (those carrying `meta.commit_sha`;
+PR/`code_review` events are excluded). GitHub events are zero-duration, so commits
+never affect the time-by-category rollups. The field is **additive** (existing
+readers that ignore it are unaffected); `by_member` is omitted under
+`aggregate_only` (org-level `total`/`by_day` are returned at every privacy level).
+
 ---
 
 ## 7. DATABASE CONVENTIONS (frozen)

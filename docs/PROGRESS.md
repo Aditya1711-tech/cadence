@@ -209,6 +209,25 @@ NOTE   P1-D : env var correction — the phase-doc P1-D var
        http://127.0.0.1:47821) + CADENCE_USE_MOCK. See web/dashboard/.env.example.
        Spine: please update the P1-D "Variables to set" block in
        docs/PHASE-1-foundation.md accordingly.
+
+NEEDS  P3-E -> P3-A : add a migration for the two budget-monitor tables (P3-E
+          can't write backend/migrations/). Exact DDL is in
+          backend/insights/budget/docs/P3-E.1-anomaly-and-dedupe.md §3:
+          (1) budget_alert_config (one row/org: enabled, spike_multiplier,
+          min_absolute_usd, baseline_days, min_history_days, tiers[], channel,
+          slack_webhook_url, alert_email, quiet_hours_start/_end, timezone,
+          mute_until) and (2) budget_alerts (dedupe ledger, UNIQUE(org_id,
+          subject_type, COALESCE(subject_id,…), day, severity)). Both org-scoped
+          with RLS org_isolation, same as every org-scoped table. NON-BLOCKING:
+          the budget loop catches a missing table, logs once, and skips — backend
+          builds/boots green without it (mirrors the P2-F claim-fn pattern).
+
+NOTE   P3-E -> ALL : budget-alert thresholds are PROVISIONAL until we have ≥2
+          weeks of live token data to calibrate against. The detector ships now;
+          the absolute floor (min_absolute_usd, default $10 ≈ a normal heavy
+          active-dev day) gets retuned at/after deploy. ALL thresholds are config
+          (CADENCE_BUDGET_* env defaults + per-org budget_alert_config overrides),
+          never hardcoded. 3× ratio and [3,5,10] severity tiers stay as-is for now.
 ```
 
 ---
@@ -514,7 +533,7 @@ NEEDS/HANDOFF; this audit only confirms them against the as-built code.
 - [ ] P3-D.5 token-overage metering
 
 ### P3-E — budget alerts
-- [ ] P3-E.1 explore anomaly definition
+- [x] P3-E.1 explore anomaly definition
 - [ ] P3-E.2 agent loop (compare → narrate)
 - [ ] P3-E.3 Slack + email delivery
 - [ ] P3-E.4 per-org config
@@ -545,4 +564,5 @@ NEEDS/HANDOFF; this audit only confirms them against the as-built code.
 2026-06-29  P3-C.3  done   POST /api/v1/query/nl (NlQueryController/Service/Executor/Config/Dtos): admin-only -> privacy lookup -> allowlist -> generate -> validate -> execute as cadence_readonly (PRIVATE Hikari DS owned by executor, NOT a Spring DataSource bean to keep primary autoconfig; read-only txn + SET LOCAL statement_timeout + set_config app.current_org RLS bind + SELECT * FROM(...) LIMIT max+1 cap) -> caption. Whole stack @ConditionalOnProperty(cadence.nlquery.enabled=false default). application.yml cadence.nlquery.*. Authored NlQueryReadonlyRoleIT (Docker-gated: cross-org SELECT=0 rows, write denied, cap truncates). doc backend/insights/nlquery/docs/P3-C-backend-verification.md; `./gradlew build` + compileIntegrationTestJava GREEN. commit 86fc8e2
 2026-06-29  P3-C.4  done   query UI: self-contained Next 14 app /web/insights (mirrors web/admin BFF httpOnly-cookie session). /ask: question box + example-prompt chips + ResultView (model caption, hand-rolled SVG bar chart for 2-col label->number results, table, capped banner, view-SQL); /login (admin-only). BFF: browser -> same-origin /api/query/nl -> proxyJson -> backend POST /api/v1/query/nl w/ Bearer server-side; tokens never reach JS. All enforcement server-side; UI is a thin client. `npm install && npm run lint && npm run build` GREEN (6 routes + middleware). doc web/insights/docs/P3-C.4-query-ui.md. commit 86fc8e2
 2026-06-29  P3-C     note   STREAM COMPLETE: backend (com.cadence.insights.nlquery) + UI (/web/insights), P3-C.1-.4 [x]; `./gradlew build` + web build GREEN; SqlValidatorTest(38)+ReadonlyRoleDefinitionTest green. Live e2e = the cadence_readonly fresh-volume deploy HANDOFF (authored NlQueryReadonlyRoleIT runs there); no owner-connection fallback ever. PHASE-3 P3-C Variables block filled; nlquery env owed to ENV-VARIABLES.md at phase close.
+2026-06-29  P3-E.1  done   anomaly + dedupe design frozen (user-approved): read events_daily_tokens (no new CAGG); daily burn per member+org; baseline = mean over ACTIVE days in trailing 14d; spike = ratio>=3x AND today>=$10 (PROVISIONAL absolute floor, config not hardcoded, retune post-deploy w/ >=2wk data); severity tiers [3,5,10]; min-history 7d. Dedupe: budget_alerts ledger UNIQUE(org,subject,day,severity) via ON CONFLICT (escalate-only, max 3/day); quiet-hours = defer-via-reevaluation (no extra queue); mute_until override. Delivery: email default (Mailer), Slack gated purely on per-org webhook presence (env=local default). Migrations spine-only -> NEEDS P3-E->P3-A filed w/ exact DDL; code degrades gracefully. doc backend/insights/budget/docs/P3-E.1-anomaly-and-dedupe.md; commit <pending>
 ```

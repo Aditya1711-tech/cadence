@@ -5,7 +5,7 @@
 > `[!]` blocked. Every `[x]` must be committed. Resuming sessions read this file
 > and the Build Log only — never the whole codebase.
 
-Last updated: 2026-06-28  ·  by stream: P2-D (DoD audit of the V2 + commit-facet finish)
+Last updated: 2026-06-29  ·  by stream: P3-B (pattern-engine exploration; P3-B.1)
 
 ---
 
@@ -458,7 +458,7 @@ NEEDS/HANDOFF; this audit only confirms them against the as-built code.
 - [x] P3-A.7 shareable card render
 
 ### P3-B — pattern engine
-- [ ] P3-B.1 explore useful patterns
+- [x] P3-B.1 explore useful patterns
 - [ ] P3-B.2 time-series rollups + simple models
 - [ ] P3-B.3 expose to digest + admin
 - [ ] P3-B.4 confidence thresholds
@@ -495,4 +495,6 @@ NEEDS/HANDOFF; this audit only confirms them against the as-built code.
 2026-06-29  P3-A.6  done   prompt engineering: DigestNarrator system prompt = facts-in JSON → grounded prose + exactly 3 spotted insights (peak hours / token efficiency / meeting load) via Anthropic structured output (StructuredMessageCreateParams, model CADENCE_DIGEST_MODEL=claude-sonnet-4-6). Hard rule enforced in prompt: use ONLY provided numbers, no invention, no raw-event access. Client built best-effort from env; missing key OR any call failure → deterministic template() fallback (pipeline always ships a digest, testable with no API key). commit b0bbc8e
 2026-06-29  P3-A.7  done   shareable card: DigestCard renders a 1200×630 branded SVG (deep-work hrs, commits, AI token cost, focus score = 100−fragmentation_index, peak block) server-side, dependency-free; XML-escaped; stored on digests.card_svg, served by GET /insights/weekly. PNG rasterization deferred (would add an image lib). commit b0bbc8e
 2026-06-29  P3-A    note   BUILD GREEN `./gradlew build` (+5 DigestRenderTest: card well-formed/hero-numbers/XML-escape, template grounded+3-spotted, low-confidence note). Env: application.yml cadence.digest.* + cadence.insights.fragmentation-saturation; ENV-VARIABLES + PHASE-3 P3-A Variables reconciled EMAIL_*→SMTP_* (SMTP-only delivery, console fallback). Live run (scheduler + LLM + SMTP + DB upserts) = Docker/key handoff, same dev-box limit as P2-A.10. P3-A STREAM COMPLETE (.1–.7 [x]); P3-A.CONTRACT ticked earlier. commit b0bbc8e
+2026-06-29  P3-B     note   START P3-B (pattern engine). Read 00/01/02 + PHASE-3 P3-B + P3-A.1 frozen fact shape. BASE: P3-A.CONTRACT is [x] (f8adcb9) but lives on worktree-stream+p3-a-insights, NOT merged to master (kickoff's "origin/main" doesn't exist — main is master). Rebased P3-B onto the P3-A spine branch (clean ff: master+2 contract commits, linear) so it builds on the frozen V3 insights/CAGGs. Flagged to operator for confirmation (P3-B.1 §8 Q3).
+2026-06-29  P3-B.1  done   pattern exploration: 3 HIGH-confidence findings only — (1) peak productivity window from events_hourly_by_category (7x24 focus grid; focus set = P3-A §3.1), (2) meeting->output correlation from events_daily_by_category (Pearson r + high/low split on daily meeting_h vs deep_work_h), (3) context-switch cost reusing P3-A §3.2 fragmentation (the ONE raw-events read — per-day switches, grain facts/CAGGs lack). Confidence = hard CADENCE_PATTERN_MIN_DAYS=14 gate (empty for low-history) + per-finding evidence bar; surface only HIGH, cap <=3. Exposure = additive PatternService bean + facts.patterns field + (proposed) GET /insights/patterns; NEEDS P3-B->P3-A (narrate facts.patterns) + P3-B->P2-E (render). Flow-state predictor deferred (not high-confidence at 2-4wk). Pure-fn analysis vs JDBC split for no-Docker unit tests + deferred Testcontainers IT. 3 open decisions for operator (route, output proxy, base). doc backend/insights/pattern/docs/P3-B.1-pattern-engine.md; commit <pending>
 ```

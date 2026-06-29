@@ -175,12 +175,24 @@ CADENCE_TOKEN_OVERAGE_PER_1K_USD=0.002
 - `P3-E.3` Slack delivery (incoming webhook) + email fallback.
 - `P3-E.4` Per-org config: thresholds, channels, mute windows.
 
-### Variables to set
+### Variables to set (as-built — bound from `cadence.budget.*`)
 ```
+CADENCE_BUDGET_ENABLED=false             # master gate; off unless ANTHROPIC_API_KEY present (like categorize)
 CADENCE_BUDGET_MODEL=claude-haiku-4-5
-CADENCE_BUDGET_CHECK_CRON=0 0 * * * *   # hourly
-SLACK_WEBHOOK_URL=                       # per-org, stored in DB; this is the dev default
+CADENCE_BUDGET_CHECK_CRON=0 0 * * * *    # hourly (Spring 6-field cron)
+CADENCE_BUDGET_SPIKE_MULTIPLIER=3.0      # global default; per-org overrides in budget_alert_config
+CADENCE_BUDGET_MIN_ABSOLUTE_USD=10.00    # PROVISIONAL real-money floor; retune post-deploy (>=2wk data)
+CADENCE_BUDGET_BASELINE_DAYS=14          # rolling baseline window (active days)
+CADENCE_BUDGET_MIN_HISTORY_DAYS=7        # min active days before any alert (low-data guard)
+CADENCE_BUDGET_TIERS=3,5,10              # severity tiers (escalation + dedupe)
+CADENCE_BUDGET_MAX_OUTPUT_TOKENS=200     # Haiku alert length cap
+SLACK_WEBHOOK_URL=                       # LOCAL-TEST default only; real webhook is per-org in the DB
 ```
+Per-org overrides (thresholds, channel, slack_webhook_url, alert_email, quiet
+hours, mute_until) live in the `budget_alert_config` table — see
+`backend/insights/budget/docs/P3-E.1-anomaly-and-dedupe.md` §3 (DDL owed by
+P3-A via NEEDS P3-E→P3-A). Email is the default channel; Slack flips on per-org
+purely by setting a webhook (zero code change).
 
 ---
 

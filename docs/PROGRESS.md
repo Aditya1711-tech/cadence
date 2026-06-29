@@ -534,9 +534,9 @@ NEEDS/HANDOFF; this audit only confirms them against the as-built code.
 
 ### P3-E — budget alerts
 - [x] P3-E.1 explore anomaly definition
-- [ ] P3-E.2 agent loop (compare → narrate)
-- [ ] P3-E.3 Slack + email delivery
-- [ ] P3-E.4 per-org config
+- [x] P3-E.2 agent loop (compare → narrate)
+- [x] P3-E.3 Slack + email delivery
+- [x] P3-E.4 per-org config
 
 **Build Log — Phase 3**
 ```
@@ -565,4 +565,7 @@ NEEDS/HANDOFF; this audit only confirms them against the as-built code.
 2026-06-29  P3-C.4  done   query UI: self-contained Next 14 app /web/insights (mirrors web/admin BFF httpOnly-cookie session). /ask: question box + example-prompt chips + ResultView (model caption, hand-rolled SVG bar chart for 2-col label->number results, table, capped banner, view-SQL); /login (admin-only). BFF: browser -> same-origin /api/query/nl -> proxyJson -> backend POST /api/v1/query/nl w/ Bearer server-side; tokens never reach JS. All enforcement server-side; UI is a thin client. `npm install && npm run lint && npm run build` GREEN (6 routes + middleware). doc web/insights/docs/P3-C.4-query-ui.md. commit 86fc8e2
 2026-06-29  P3-C     note   STREAM COMPLETE: backend (com.cadence.insights.nlquery) + UI (/web/insights), P3-C.1-.4 [x]; `./gradlew build` + web build GREEN; SqlValidatorTest(38)+ReadonlyRoleDefinitionTest green. Live e2e = the cadence_readonly fresh-volume deploy HANDOFF (authored NlQueryReadonlyRoleIT runs there); no owner-connection fallback ever. PHASE-3 P3-C Variables block filled; nlquery env owed to ENV-VARIABLES.md at phase close.
 2026-06-29  P3-E.1  done   anomaly + dedupe design frozen (user-approved): read events_daily_tokens (no new CAGG); daily burn per member+org; baseline = mean over ACTIVE days in trailing 14d; spike = ratio>=3x AND today>=$10 (PROVISIONAL absolute floor, config not hardcoded, retune post-deploy w/ >=2wk data); severity tiers [3,5,10]; min-history 7d. Dedupe: budget_alerts ledger UNIQUE(org,subject,day,severity) via ON CONFLICT (escalate-only, max 3/day); quiet-hours = defer-via-reevaluation (no extra queue); mute_until override. Delivery: email default (Mailer), Slack gated purely on per-org webhook presence (env=local default). Migrations spine-only -> NEEDS P3-E->P3-A filed w/ exact DDL; code degrades gracefully. doc backend/insights/budget/docs/P3-E.1-anomaly-and-dedupe.md; commit <pending>
+2026-06-29  P3-E.4  done   per-org config: OrgBudgetConfig + BudgetConfigStore reads budget_alert_config (env defaults when no row OR table missing -> graceful degrade, warns once). BudgetProperties binds cadence.budget.* (enabled gate off by default, like categorize). application.yml block added. Thresholds all config (env + per-org), none hardcoded. (built together w/ .2/.3) commit <pending>
+2026-06-29  P3-E.2  done   agent loop: BudgetMonitor @Scheduled(cron=CADENCE_BUDGET_CHECK_CRON, hourly), gated @ConditionalOnProperty cadence.budget.enabled=true. Cross-org scan of events_daily_tokens (explicit org_id filter = tenant guard, like P2-F); BudgetWindowAssembler folds cells->per-member+org daily burns; BudgetAnomalyDetector (active-day mean baseline, ratio>=mult AND today>=floor, min-history gate, severity tiers); BudgetAlertNarrator (Haiku via official SDK like AnthropicCategorizer, never throws -> deterministic template fallback; self-built client, no bean collision w/ worker). commit <pending>
+2026-06-29  P3-E.3  done   delivery: BudgetAlertDispatcher email-DEFAULT (reuse com.cadence.mail.Mailer, SMTP->console fallback) / Slack gated PURELY on webhook presence (SlackNotifier via JDK HttpClient, no new dep) -> flips on per-org w/ zero code change; Slack failure falls back to email. AlertRecipientStore = alert_email or org owners/admins. Dedupe: BudgetAlertLedger INSERT..ON CONFLICT DO NOTHING on (org,subject,day,severity) -> deliver only if newly claimed (escalate-only, never spams). Quiet hours = defer-via-reevaluation (QuietHours, tz-aware, midnight-wrap). 20 DB-free unit tests (detector/quiet-hours/assembler/narrator/channel) green; `./gradlew build` GREEN; live DB+Slack/SMTP = deploy handoff (no Docker on dev box, same as P2-A.10). commit <pending>
 ```

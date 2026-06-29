@@ -84,6 +84,17 @@ cadence:
     peak-concentration: ${CADENCE_PATTERN_PEAK_CONCENTRATION:1.5}  # peak hour ≥ N× avg active hour
     min-correlation: ${CADENCE_PATTERN_MIN_CORRELATION:0.4}        # |r| floor for findings 2 & 3
     min-effect: ${CADENCE_PATTERN_MIN_EFFECT:0.15}                 # min output delta on high/low split
+  budget:                              # P3-E agentic token-budget monitor
+    enabled: ${CADENCE_BUDGET_ENABLED:false}       # off unless ANTHROPIC_API_KEY present
+    model: ${CADENCE_BUDGET_MODEL:claude-haiku-4-5}
+    check-cron: ${CADENCE_BUDGET_CHECK_CRON:0 0 * * * *}   # hourly
+    spike-multiplier: ${CADENCE_BUDGET_SPIKE_MULTIPLIER:3.0}    # global default; per-org overrides in DB
+    min-absolute-usd: ${CADENCE_BUDGET_MIN_ABSOLUTE_USD:10.00}  # PROVISIONAL — retune post-deploy (>=2wk data)
+    baseline-days: ${CADENCE_BUDGET_BASELINE_DAYS:14}
+    min-history-days: ${CADENCE_BUDGET_MIN_HISTORY_DAYS:7}
+    tiers: ${CADENCE_BUDGET_TIERS:3,5,10}          # severity tiers (escalation/dedupe)
+    max-output-tokens: ${CADENCE_BUDGET_MAX_OUTPUT_TOKENS:200}
+    slack-webhook-url: ${SLACK_WEBHOOK_URL:}       # LOCAL-TEST default only; real = per-org DB
 
 management:
   endpoints:

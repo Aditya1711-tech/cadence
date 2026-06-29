@@ -246,6 +246,47 @@ shape.md`. Stored in the `insights`/`digests` tables (§7); `commits` reuses the
 `orgs.privacy_level` exactly like `/org/summary` (`top_contributors` omitted under
 `aggregate_only`).
 
+**Additive contract extension (P3-B, pattern findings):** the pattern engine
+surfaces **1–3 high-confidence findings** (peak productivity window,
+meeting→output correlation, context-switch cost) as a typed, pre-aggregated fact
+— numbers come from SQL, the LLM only writes prose. It is exposed two additive
+ways (existing readers that ignore either are unaffected):
+
+- **A new route** `GET /api/v1/insights/patterns?range[&scope=org]` (P3-B-owned)
+  so the admin view (P2-E) can read findings now, independent of P3-A's digest.
+  `range` is `<N>d`/`<N>w` (default `4w`); `scope=org` is admin-only.
+- **An additive `patterns` array** on the frozen facts the digest narrates from
+  (`MemberWeekFacts`/`OrgWeekFacts`), so the weekly story can cite the findings.
+
+Both carry the same payload:
+
+```jsonc
+{
+  "grain": "member",                 // member | org
+  "from": "…", "to": "…",
+  "history_days": 21,
+  "low_confidence": false,           // true ⇒ findings = [] (history < min-days)
+  "findings": [
+    { "kind": "peak_window",         // peak_window | meeting_output | context_switch
+      "title": "Peak focus: Tue around 10:00",
+      "detail": "Your most focused hour is Tue ~10:00 (UTC) …",
+      "confidence": "high",          // only HIGH is surfaced
+      "strength": 0.64,              // ranking score [0,1]
+      "evidence": { … }              // the SQL-derived numbers the narrator may quote
+    }
+  ]
+}
+```
+
+Gating (P3-B.4): a caller with fewer than `CADENCE_PATTERN_MIN_DAYS` (14) distinct
+active days gets `low_confidence=true` and an **empty** `findings` list — no noisy
+claims (mirrors P3-A's `low_confidence`). Findings are **aggregate and name no
+member**, so org-grain findings are privacy-safe at every level (no
+`aggregate_only` branch needed). Built on the frozen facts + the V1 CAGGs; the only
+raw-event read is the per-day context-switch count (grain the facts/CAGGs lack),
+reusing the P3-A §3.2 fragmentation rules. Findings shape:
+`backend/insights/pattern/docs/P3-B.1-pattern-engine.md`.
+
 ---
 
 ## 7. DATABASE CONVENTIONS (frozen)

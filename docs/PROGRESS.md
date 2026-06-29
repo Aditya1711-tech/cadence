@@ -5,7 +5,7 @@
 > `[!]` blocked. Every `[x]` must be committed. Resuming sessions read this file
 > and the Build Log only — never the whole codebase.
 
-Last updated: 2026-06-29  ·  by stream: P3-B (pattern engine impl; P3-B.2/.4)
+Last updated: 2026-06-29  ·  by stream: P3-B (pattern findings exposure; P3-B.3)
 
 ---
 
@@ -43,6 +43,23 @@ NOTE   P3-A -> P3-B/C/E : aggregated-fact contract FROZEN (V3 insights/digests +
           privacy-bounded (top_contributors omitted under aggregate_only). Shape
           ref: 00-SYSTEM-KNOWLEDGE.md §6 + backend/insights/docs/
           P3-A.1-aggregated-fact-shape.md, P3-A.2-delivery-and-card.md.
+NEEDS  P3-B -> P3-A : attach pattern findings to the digest. Call
+          com.cadence.insights.pattern.PatternService.forMember(p,range) /
+          forOrg(p,range) in the fact-builder/narrator and set the ADDITIVE
+          `patterns` array on MemberWeekFacts/OrgWeekFacts (shape doc'd §6 +
+          backend/insights/pattern/docs/P3-B.1). NOTE on integration: P3-B does
+          NOT read the `insights` table (contra the P3-A NOTE above) — it computes
+          findings from the SAME sources the facts use (events_hourly/daily_by_
+          category CAGGs + the P3-A §3.2 raw fragmentation), so there is NO ordering
+          dependency on P3-A.5 populating `insights`. P3-A just grafts the returned
+          List<Finding> onto facts.patterns; existing readers ignoring it are
+          unaffected (additive, same as the commits facet).
+NEEDS  P3-B -> P2-E : render pattern findings in the admin overview (a "What we
+          noticed" card). Read GET /api/v1/insights/patterns?scope=org&range (admin;
+          BFF proxy like the other /api/org/* routes) OR facts.patterns once P3-A
+          wires it. Payload = {grain,history_days,low_confidence,findings[]} with
+          findings[{kind,title,detail,confidence,strength,evidence}] (§6). Show
+          nothing when low_confidence=true (honest empty, like the commit panel).
 
 OPEN   P2-C -> P1-A : wire the token watcher into the daemon — one call in
           agent/cmd/cadence-agent/main.go (P1-A-owned) to start the token
@@ -460,7 +477,7 @@ NEEDS/HANDOFF; this audit only confirms them against the as-built code.
 ### P3-B — pattern engine
 - [x] P3-B.1 explore useful patterns
 - [x] P3-B.2 time-series rollups + simple models
-- [ ] P3-B.3 expose to digest + admin
+- [x] P3-B.3 expose to digest + admin
 - [x] P3-B.4 confidence thresholds
 
 ### P3-C — NL query
@@ -498,6 +515,7 @@ NEEDS/HANDOFF; this audit only confirms them against the as-built code.
 2026-06-29  P3-B     note   START P3-B (pattern engine). Read 00/01/02 + PHASE-3 P3-B + P3-A.1 frozen fact shape. BASE: P3-A.CONTRACT is [x] (f8adcb9) but lives on worktree-stream+p3-a-insights, NOT merged to master (kickoff's "origin/main" doesn't exist — main is master). Rebased P3-B onto the P3-A spine branch (clean ff: master+2 contract commits, linear) so it builds on the frozen V3 insights/CAGGs. Flagged to operator for confirmation (P3-B.1 §8 Q3).
 2026-06-29  P3-B.1  done   pattern exploration: 3 HIGH-confidence findings only — (1) peak productivity window from events_hourly_by_category (7x24 focus grid; focus set = P3-A §3.1), (2) meeting->output correlation from events_daily_by_category (Pearson r + high/low split on daily meeting_h vs deep_work_h), (3) context-switch cost reusing P3-A §3.2 fragmentation (the ONE raw-events read — per-day switches, grain facts/CAGGs lack). Confidence = hard CADENCE_PATTERN_MIN_DAYS=14 gate (empty for low-history) + per-finding evidence bar; surface only HIGH, cap <=3. Exposure = additive PatternService bean + facts.patterns field + (proposed) GET /insights/patterns; NEEDS P3-B->P3-A (narrate facts.patterns) + P3-B->P2-E (render). Flow-state predictor deferred (not high-confidence at 2-4wk). Pure-fn analysis vs JDBC split for no-Docker unit tests + deferred Testcontainers IT. 3 open decisions for operator (route, output proxy, base). doc backend/insights/pattern/docs/P3-B.1-pattern-engine.md; commit badaec4
 2026-06-29  P3-B     note   BASE clean: ff master -> b9c89b1 (P3-A contract: V3 insights/digests + cadence_readonly + §6/§7 docs) in the main worktree, then rebased P3-B onto master (linear). Per operator: master is the canonical base for all wave streams (no `main`/origin). P3-A's session keeps its later feature commits (640ee63 /insights/weekly endpoint, etc.) on its branch to merge separately.
-2026-06-29  P3-B.2  done   pattern engine impl in com.cadence.insights.pattern: PatternAnalysis (PURE fns — 3 models: peakWindow over 7x24 focus grid w/ concentration ratio; meetingOutput Pearson r + median split on daily meeting_h vs deep_work_h; contextSwitch on daily project-switch rate vs deep_work_h) + PatternService (JDBC: events_hourly/daily_by_category CAGGs + ONE raw-events read = per-day fragmentation reusing P3-A §3.2; every query org_id-filtered, tenancy.bind). PatternRange (4w default). All <=3 findings, ranked by strength. `./gradlew build` GREEN. commit <pending-A>
-2026-06-29  P3-B.4  done   confidence model: hard CADENCE_PATTERN_MIN_DAYS=14 gate in analyze()+service short-circuit -> low-history caller gets low_confidence=true + EMPTY findings; per-finding evidence bars (peak-concentration 1.5x, min |r| 0.4, min effect 0.15) tunable via cadence.pattern.* (PatternProperties record + PatternConfig). Proven by PatternAnalysisTest (9 tests, seeded >14d fixture): each model's math, weak-signal drop, and the headline gate (5 active days w/ strong data -> empty). commit <pending-A>
+2026-06-29  P3-B.2  done   pattern engine impl in com.cadence.insights.pattern: PatternAnalysis (PURE fns — 3 models: peakWindow over 7x24 focus grid w/ concentration ratio; meetingOutput Pearson r + median split on daily meeting_h vs deep_work_h; contextSwitch on daily project-switch rate vs deep_work_h) + PatternService (JDBC: events_hourly/daily_by_category CAGGs + ONE raw-events read = per-day fragmentation reusing P3-A §3.2; every query org_id-filtered, tenancy.bind). PatternRange (4w default). All <=3 findings, ranked by strength. `./gradlew build` GREEN. commit 7f4d0e7
+2026-06-29  P3-B.4  done   confidence model: hard CADENCE_PATTERN_MIN_DAYS=14 gate in analyze()+service short-circuit -> low-history caller gets low_confidence=true + EMPTY findings; per-finding evidence bars (peak-concentration 1.5x, min |r| 0.4, min effect 0.15) tunable via cadence.pattern.* (PatternProperties record + PatternConfig). Proven by PatternAnalysisTest (9 tests, seeded >14d fixture): each model's math, weak-signal drop, and the headline gate (5 active days w/ strong data -> empty). commit 7f4d0e7
+2026-06-29  P3-B.3  done   expose findings ADDITIVELY (same discipline as P2-D commits facet): PatternController GET /api/v1/insights/patterns?range[&scope=org] (member self / admin org) in com.cadence.insights.pattern; documented in 00-SYSTEM-KNOWLEDGE.md §6 (additive route + additive facts.patterns[] field on MemberWeekFacts/OrgWeekFacts + Finding wire shape + gating/privacy-safety). Coordination: NEEDS P3-B->P3-A (call PatternService, graft facts.patterns — NO dependency on insights table / P3-A.5; findings computed from same CAGGs+§3.2 fragmentation) + NEEDS P3-B->P2-E (render "What we noticed" card; honest-empty on low_confidence). `./gradlew build` GREEN. Live JDBC path (CAGG/raw reads) = Docker-deferred integrationTest, same dev-box limit as P2-A.10. commit <pending-B>
 ```

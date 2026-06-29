@@ -45,6 +45,8 @@ cadence:
     from: ${SMTP_FROM:no-reply@cadence.local}
   app:
     public-base-url: ${APP_PUBLIC_BASE_URL:http://localhost:3000}
+  insights:                            # P3-A digest / aggregated facts
+    fragmentation-saturation: ${CADENCE_FRAGMENTATION_SATURATION:4.0}  # switches/focus-h ⇒ index 100
   github:                                    # P2-D — GitHub integration
     app-id: ${GITHUB_APP_ID:}
     private-key: ${GITHUB_APP_PRIVATE_KEY:}  # PEM, base64; full_diff only

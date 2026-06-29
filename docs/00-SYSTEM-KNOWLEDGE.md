@@ -198,8 +198,13 @@ Base path: `/api/v1`. JSON only. Auth via `Authorization: Bearer <jwt>`.
 | `GET`  | `/api/v1/github/installations` | Admin: list installations | P2-D |
 
 - **Not yet built** (the Phase-3 rows in the table above): `/query/nl`,
-  `/billing/webhook`. `/insights/weekly` is **contract-frozen** (P3-A: tables +
-  aggregated-fact shape merged in `V3`); the endpoint itself lands in P3-A.4.
+  `/billing/webhook`. `/insights/weekly` is **built** (P3-A.4): `GET` returns
+  `{ week, member, org }` where each section is `{ facts, narrative, spotted[],
+  card_svg, generated_at, status }`. `facts` is the frozen `MemberWeekFacts`/
+  `OrgWeekFacts`, recomputed live from SQL each call; `narrative`/`spotted`/
+  `card_svg` populate once the weekly digest job (P3-A.5) runs (null/empty until
+  then). The `org` section is present only for admins and is privacy-bounded.
+  `?week=YYYY-Www` selects a week (default = most recent completed ISO week).
 - **Known gap vs Phase-2 exit criteria:** there is **no endpoint to SET**
   `orgs.privacy_level`. It is created at the server default and is only
   *readable* (`AuthResponse.org.privacy_level`); a setter

@@ -427,8 +427,8 @@ NEEDS/HANDOFF; this audit only confirms them against the as-built code.
 ## Phase 3 — AI Intelligence + Revenue
 
 ### P3-A — insights foundation  (SPINE)
-- [ ] P3-A.1 explore aggregated-fact shape
-- [ ] P3-A.2 explore delivery + shareable card
+- [x] P3-A.1 explore aggregated-fact shape
+- [x] P3-A.2 explore delivery + shareable card
 - [ ] P3-A.3 insights/digests migration + aggregation layer  ← ticks P3-A.CONTRACT
 - [ ] P3-A.4 weekly insights endpoint
 - [ ] P3-A.5 digest job (compute → narrate → store/email)
@@ -463,4 +463,7 @@ NEEDS/HANDOFF; this audit only confirms them against the as-built code.
 **Build Log — Phase 3**
 ```
 (append newest at bottom)
+2026-06-29  P3-A     note   START P3-A (spine). Read 00/01/02 + PHASE-3 P3-A + readiness (DOCS line, commit 144cbed) + P2-D-finish (commits GAP closed at code path, 9a6d41a). Grounded design in as-built: facts from raw events + 3 CAGGs (events_daily_by_category/_hourly/_tokens), commit facet from /org/summary path, com.cadence.mail.Mailer already does SMTP-or-LogMailer fallback, Anthropic SDK already wired (anthropic-java 2.34.0, structured output), cadence_app role created in deploy/initdb/00-app-role.sql (pattern for cadence_readonly). User-approved design choices: digest grain = per-member + org rollup; fragmentation focus set = deep_work+code_review+ai_assisted+research; card = server-side SVG only.
+2026-06-29  P3-A.1  done   aggregated-fact shape frozen: MemberWeekFacts + OrgWeekFacts (grain column), headline scalars (deep_work_h/meeting_h/token_cost_usd/commits/fragmentation_index) + by_category_h/tokens/peak_block + deltas_vs_4wk_avg; no new CAGG; org grain privacy-bounded (top_contributors omitted under aggregate_only). doc backend/insights/docs/P3-A.1-aggregated-fact-shape.md; commit 46cc026
+2026-06-29  P3-A.2  done   delivery design: weekly @Scheduled cron (Sun 23:00), whole stack @ConditionalOnProperty(cadence.digest.enabled=true) default false; pipeline compute(SQL)->upsert insights->narrate(Sonnet structured {narrative,spotted[3]})->SVG card->persist digests->deliver via reused Mailer (SMTP else LogMailer console fallback) + GET /insights/weekly; SVG-only card; env reconcile EMAIL_* -> SMTP_*. doc backend/insights/docs/P3-A.2-delivery-and-card.md; commit 46cc026
 ```

@@ -197,8 +197,9 @@ Base path: `/api/v1`. JSON only. Auth via `Authorization: Bearer <jwt>`.
 | `PUT`  | `/api/v1/github/installations/{id}/mode` | Admin: set privacy mode | P2-D |
 | `GET`  | `/api/v1/github/installations` | Admin: list installations | P2-D |
 
-- **Not yet built** (the Phase-3 rows in the table above): `/insights/weekly`,
-  `/query/nl`, `/billing/webhook`.
+- **Not yet built** (the Phase-3 rows in the table above): `/query/nl`,
+  `/billing/webhook`. `/insights/weekly` is **contract-frozen** (P3-A: tables +
+  aggregated-fact shape merged in `V3`); the endpoint itself lands in P3-A.4.
 - **Known gap vs Phase-2 exit criteria:** there is **no endpoint to SET**
   `orgs.privacy_level`. It is created at the server default and is only
   *readable* (`AuthResponse.org.privacy_level`); a setter
@@ -221,6 +222,21 @@ PR/`code_review` events are excluded). GitHub events are zero-duration, so commi
 never affect the time-by-category rollups. The field is **additive** (existing
 readers that ignore it are unaffected); `by_member` is omitted under
 `aggregate_only` (org-level `total`/`by_day` are returned at every privacy level).
+
+**Aggregated-fact contract (P3-A, insights):** `GET /insights/weekly` returns
+**pre-aggregated facts** plus a generated narrative. The frozen fact shape is the
+single object the LLM narrates from — **never raw events, never prompt/response
+content** (the hard privacy rule, §8). Two grains, one shape family
+(`grain='member'` → `MemberWeekFacts`; `grain='org'` → `OrgWeekFacts`, admin-only,
+privacy-bounded). Headline scalars: `deep_work_h`, `meeting_h`, `token_cost_usd`,
+`commits`, `fragmentation_index` (0..100, derived in SQL — not stored), plus
+`by_category_h`, tokens, `peak_block`, and `deltas_vs_4wk_avg` (member's/org's
+trailing 4-week average). Numbers come from SQL; the model only writes prose. Full
+shape + fragmentation derivation: `backend/insights/docs/P3-A.1-aggregated-fact-
+shape.md`. Stored in the `insights`/`digests` tables (§7); `commits` reuses the
+`/org/summary` commit-facet code path (no second source). Org grain honors
+`orgs.privacy_level` exactly like `/org/summary` (`top_contributors` omitted under
+`aggregate_only`).
 
 ---
 
@@ -283,15 +299,33 @@ run under single-org RLS, so it is owed a `claim_categorize_jobs()`
 - Migrations: Flyway, versioned `V1__init.sql`, `V2__...`. Owned by the spine
   stream of each phase. Other streams **request** a migration via the Build Log;
   they do not write to the migrations folder.
-  **As-built only `V1__init.sql` exists.** Two migrations are *requested but not
-  yet written* by the P2 spine (their consuming code is merged and degrades
-  gracefully until they land):
-  - `V2` **`github_installations`** (`installation_id`→`org_id` + privacy `mode`)
-    — without it P2-D's webhook cannot resolve an org, so **no github/commit
-    events are stored** (NEEDS P2-D→P2-A).
-  - **`claim_categorize_jobs()`** `SECURITY DEFINER` (cross-org claim + stale-lock
-    reclaim, `GRANT EXECUTE` to `cadence_app`) — without it the P2-F worker idles
-    (NEEDS P2-F→P2-A).
+  **As-built `V1`, `V2`, `V3` exist:**
+  - `V1__init.sql` — base schema (orgs/members/teams/seats/events hypertable/
+    job_queue + 3 CAGGs + RLS).
+  - `V2__github_installations.sql` — `installation_id`→`org_id` + privacy `mode`
+    (P2-D); without it the webhook cannot resolve an org. (RESOLVED P2-D→P2-A.)
+  - `V3__insights_digests.sql` — Phase-3 spine: the `insights`/`digests` tables
+    (the aggregated-fact store, §6 contract). Transactional (no CAGGs).
+  - Still *owed* (requested, not yet written): **`claim_categorize_jobs()`**
+    `SECURITY DEFINER` (cross-org claim + stale-lock reclaim, `GRANT EXECUTE` to
+    `cadence_app`) — without it the P2-F worker idles (NEEDS P2-F→P2-A).
+- **Insights store (P3-A, `V3`):** `insights` holds one aggregated-fact row per
+  `(org_id, member_id, iso_week, grain)` — `grain='member'` (member_id NOT NULL)
+  or `grain='org'` (member_id NULL); denormalized headline scalars
+  (`deep_work_h, meeting_h, token_cost_usd, commits, fragmentation_index`) +
+  `facts jsonb` (the full frozen shape). `digests` holds one narrated+delivered
+  row per insight (narrative, `spotted` jsonb, `card_svg`, delivery `status`).
+  Partial unique indexes give per-grain upsert targets; both tables carry RLS
+  `org_isolation` (not FORCEd), same as every org-scoped table. No new CAGG.
+- **Read-only role (P3-A, deploy/initdb):** `cadence_readonly` — SELECT-only,
+  non-owner, RLS-enforced, org-scoped — is created in
+  `deploy/initdb/01-readonly-role.sql` (cluster-init, alongside `cadence_app`),
+  not in a migration (role creation needs the init superuser; `ALTER DEFAULT
+  PRIVILEGES` run as `cadence` covers future Flyway tables). It is the role P3-C
+  NL-query connects as (`CADENCE_NLQUERY_DB_ROLE`); RLS is the hard backstop
+  even if the text-to-SQL allowlist is wrong. First non-owner consumer, so for
+  the NL-query path RLS is genuinely enforced (vs the app's owner-connection
+  backstop today).
 
 ### 7.1 Local agent store (Phase 1, as built)
 

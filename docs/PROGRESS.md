@@ -13,7 +13,7 @@ Last updated: 2026-06-28  ·  by stream: P2-D (DoD audit of the V2 + commit-face
 
 - [x] `P1-A.CONTRACT` — Event Contract frozen in code (Go structs + JSON, golden sample, tests green); local routes land in P1-A.5 (unblocks P1-B/C/D)
 - [x] `P2-A.CONTRACT` — ingest + query + schema frozen (unblocks P2-B/C/D/E/F). Schema = backend/migrations/V1__init.sql; ingest shape = EventDto/IngestResult; query shapes = Summaries.*; auth shapes = AuthDtos.*. Backend compiles (JDK21 toolchain) + 11 unit tests green; full DB e2e is authored (Testcontainers, P2-A.10) and runs on a Docker host. Frozen at code/SQL/doc level — safe to launch Wave-1.
-- [ ] `P3-A.CONTRACT` — aggregated-fact shape frozen (unblocks P3-B/C/E)
+- [x] `P3-A.CONTRACT` — aggregated-fact shape frozen (unblocks P3-B/C/E). Shape = MemberWeekFacts/OrgWeekFacts (backend/insights/docs/P3-A.1) stored in insights/digests (V3__insights_digests.sql); cadence_readonly role created (deploy/initdb/01-readonly-role.sql) for P3-C. Documented additive in 00-SYSTEM-KNOWLEDGE.md §6/§7. Safe to launch P3-B/C/E.
 
 ---
 
@@ -21,6 +21,28 @@ Last updated: 2026-06-28  ·  by stream: P2-D (DoD audit of the V2 + commit-face
 ```
 (none yet — add cross-stream requests here, e.g.)
 NEEDS  P2-E -> P2-A : /api/v1/org/summary returns per-category daily buckets
+
+RESOLVED  P3-A -> P3-C : cadence_readonly DB role created in
+          deploy/initdb/01-readonly-role.sql — SELECT-only, non-owner,
+          RLS-enforced, org-scoped (the role CADENCE_NLQUERY_DB_ROLE already
+          referenced but nothing created). P3-C connects a separate datasource as
+          cadence_readonly and sets app.current_org per request (same door as
+          cadence_app); RLS is the hard backstop behind the text-to-SQL
+          allowlist. Fresh-init only (initdb) — drop/recreate the dev volume to
+          pick it up; same limit as cadence_app.
+NOTE   P3-A -> P3-B/C/E : aggregated-fact contract FROZEN (V3 insights/digests +
+          MemberWeekFacts/OrgWeekFacts, grain column). P3-B reads the `insights`
+          table (facts jsonb + denormalized scalars: deep_work_h, meeting_h,
+          token_cost_usd, commits, fragmentation_index; one row per
+          org/member/iso_week/grain). Facts are built from the EXISTING CAGGs +
+          raw events + the /org/summary commit-facet code path — NO new CAGG, NO
+          new commits source. fragmentation_index is SQL-derived (project context
+          switches per focused hour over deep_work+code_review+ai_assisted+
+          research; >30min gap = session boundary; SATURATION=4.0). P3-E reads
+          the same token rollups (events_daily_tokens). Org grain is
+          privacy-bounded (top_contributors omitted under aggregate_only). Shape
+          ref: 00-SYSTEM-KNOWLEDGE.md §6 + backend/insights/docs/
+          P3-A.1-aggregated-fact-shape.md, P3-A.2-delivery-and-card.md.
 
 OPEN   P2-C -> P1-A : wire the token watcher into the daemon — one call in
           agent/cmd/cadence-agent/main.go (P1-A-owned) to start the token
@@ -429,7 +451,7 @@ NEEDS/HANDOFF; this audit only confirms them against the as-built code.
 ### P3-A — insights foundation  (SPINE)
 - [x] P3-A.1 explore aggregated-fact shape
 - [x] P3-A.2 explore delivery + shareable card
-- [ ] P3-A.3 insights/digests migration + aggregation layer  ← ticks P3-A.CONTRACT
+- [x] P3-A.3 insights/digests migration + aggregation layer  ← ticks P3-A.CONTRACT
 - [ ] P3-A.4 weekly insights endpoint
 - [ ] P3-A.5 digest job (compute → narrate → store/email)
 - [ ] P3-A.6 prompt engineering (grounded narrative)
@@ -466,4 +488,6 @@ NEEDS/HANDOFF; this audit only confirms them against the as-built code.
 2026-06-29  P3-A     note   START P3-A (spine). Read 00/01/02 + PHASE-3 P3-A + readiness (DOCS line, commit 144cbed) + P2-D-finish (commits GAP closed at code path, 9a6d41a). Grounded design in as-built: facts from raw events + 3 CAGGs (events_daily_by_category/_hourly/_tokens), commit facet from /org/summary path, com.cadence.mail.Mailer already does SMTP-or-LogMailer fallback, Anthropic SDK already wired (anthropic-java 2.34.0, structured output), cadence_app role created in deploy/initdb/00-app-role.sql (pattern for cadence_readonly). User-approved design choices: digest grain = per-member + org rollup; fragmentation focus set = deep_work+code_review+ai_assisted+research; card = server-side SVG only.
 2026-06-29  P3-A.1  done   aggregated-fact shape frozen: MemberWeekFacts + OrgWeekFacts (grain column), headline scalars (deep_work_h/meeting_h/token_cost_usd/commits/fragmentation_index) + by_category_h/tokens/peak_block + deltas_vs_4wk_avg; no new CAGG; org grain privacy-bounded (top_contributors omitted under aggregate_only). doc backend/insights/docs/P3-A.1-aggregated-fact-shape.md; commit 46cc026
 2026-06-29  P3-A.2  done   delivery design: weekly @Scheduled cron (Sun 23:00), whole stack @ConditionalOnProperty(cadence.digest.enabled=true) default false; pipeline compute(SQL)->upsert insights->narrate(Sonnet structured {narrative,spotted[3]})->SVG card->persist digests->deliver via reused Mailer (SMTP else LogMailer console fallback) + GET /insights/weekly; SVG-only card; env reconcile EMAIL_* -> SMTP_*. doc backend/insights/docs/P3-A.2-delivery-and-card.md; commit 46cc026
+2026-06-29  P3-A.3  done   wrote backend/migrations/V3__insights_digests.sql (insights + digests tables; grain column member|org with member_id-presence CHECK; denormalized headline scalars + facts jsonb; partial unique indexes per grain for upsert; RLS org_isolation, not FORCEd; transactional, no CAGGs, no .conf) + deploy/initdb/01-readonly-role.sql (cadence_readonly: SELECT-only non-owner RLS-enforced org-scoped; ALTER DEFAULT PRIVILEGES covers future Flyway tables). Documented additive in 00-SYSTEM-KNOWLEDGE.md §6 (aggregated-fact contract + /insights/weekly now contract-frozen) + §7 (V3 tables, cadence_readonly role, migrations list refreshed V1/V2/V3). Coordination: RESOLVED P3-A->P3-C (role) + NOTE P3-A->P3-B/C/E (contract frozen). Ticks P3-A.CONTRACT — unblocks P3-B/C/E. `./gradlew build` GREEN (no Java changed; migration packaged via processResources; live apply = Docker handoff, same dev-box limit as P2-A.10). commit f8adcb9
+2026-06-29  P3-A.CONTRACT  done  aggregated-fact shape frozen on the stream branch; insights/digests (V3) + cadence_readonly role + §6/§7 docs merged; P3-B/C/E may launch. commit f8adcb9
 ```

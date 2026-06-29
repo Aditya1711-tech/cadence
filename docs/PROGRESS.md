@@ -5,7 +5,7 @@
 > `[!]` blocked. Every `[x]` must be committed. Resuming sessions read this file
 > and the Build Log only — never the whole codebase.
 
-Last updated: 2026-06-29  ·  by stream: P3-B (pattern findings exposure; P3-B.3)
+Last updated: 2026-06-29  ·  by stream: P3-C (NL query — stream complete; merged to master)
 
 ---
 
@@ -30,6 +30,26 @@ RESOLVED  P3-A -> P3-C : cadence_readonly DB role created in
           cadence_app); RLS is the hard backstop behind the text-to-SQL
           allowlist. Fresh-init only (initdb) — drop/recreate the dev volume to
           pick it up; same limit as cadence_app.
+HANDOFF  P3-C live verification needs the cadence_readonly role, which
+          materializes on fresh DB volume at deploy. The NL-query path connects a
+          SEPARATE datasource as cadence_readonly (never the owner/app
+          connection) and is gated CADENCE_NLQUERY_ENABLED=false by default, so
+          build+unit tests are green without it. At deploy on a fresh volume: set
+          CADENCE_NLQUERY_ENABLED=true + ANTHROPIC_API_KEY + the readonly
+          datasource (CADENCE_NLQUERY_DB_URL/USER/PASSWORD), then run the authored
+          Docker IT (cross-org SELECT returns 0 rows; INSERT/UPDATE denied; row
+          cap truncates) — mirrors E2EIngestQueryIT. Belt-and-suspenders follow-up
+          (optional NEEDS -> spine): tighten cadence_readonly's SELECT grant from
+          ALL TABLES to just the NL allowlist so password_hash/token-hashes are
+          ungrantable at the DB layer too (today the app-layer allowlist carries
+          that within-org guard).
+DECISION  P3-C (operator-approved) : (1) SQL validation = JSqlParser fail-closed
+          structural allowlist (parse, single SELECT, walk tables+columns, reject
+          off-allowlist/parse-error) + token denylist as a coarse belt — regex
+          alone NOT acceptable for the gate; (2) NL query is ADMIN-ONLY for v1
+          (RLS is org- not member-scoped). Member-scoped self-serve (a hard
+          member_id predicate so a member can query only their OWN data) is a
+          deliberate LATER addition, not v1.
 NOTE   P3-A -> P3-B/C/E : aggregated-fact contract FROZEN (V3 insights/digests +
           MemberWeekFacts/OrgWeekFacts, grain column). P3-B reads the `insights`
           table (facts jsonb + denormalized scalars: deep_work_h, meeting_h,
@@ -481,10 +501,10 @@ NEEDS/HANDOFF; this audit only confirms them against the as-built code.
 - [x] P3-B.4 confidence thresholds
 
 ### P3-C — NL query
-- [ ] P3-C.1 explore safe text-to-SQL constraints
-- [ ] P3-C.2 schema-aware prompt → SQL (read-only, scoped)
-- [ ] P3-C.3 nl query endpoint
-- [ ] P3-C.4 query UI + charts
+- [x] P3-C.1 explore safe text-to-SQL constraints
+- [x] P3-C.2 schema-aware prompt → SQL (read-only, scoped)
+- [x] P3-C.3 nl query endpoint
+- [x] P3-C.4 query UI + charts
 
 ### P3-D — billing
 - [ ] P3-D.1 explore pricing → Stripe mapping
@@ -519,4 +539,10 @@ NEEDS/HANDOFF; this audit only confirms them against the as-built code.
 2026-06-29  P3-B.4  done   confidence model: hard CADENCE_PATTERN_MIN_DAYS=14 gate in analyze()+service short-circuit -> low-history caller gets low_confidence=true + EMPTY findings; per-finding evidence bars (peak-concentration 1.5x, min |r| 0.4, min effect 0.15) tunable via cadence.pattern.* (PatternProperties record + PatternConfig). Proven by PatternAnalysisTest (9 tests, seeded >14d fixture): each model's math, weak-signal drop, and the headline gate (5 active days w/ strong data -> empty). commit b00f6d8
 2026-06-29  P3-B.3  done   expose findings ADDITIVELY (same discipline as P2-D commits facet): PatternController GET /api/v1/insights/patterns?range[&scope=org] (member self / admin org) in com.cadence.insights.pattern; documented in 00-SYSTEM-KNOWLEDGE.md §6 (additive route + additive facts.patterns[] field on MemberWeekFacts/OrgWeekFacts + Finding wire shape + gating/privacy-safety). Coordination: NEEDS P3-B->P3-A (call PatternService, graft facts.patterns — NO dependency on insights table / P3-A.5; findings computed from same CAGGs+§3.2 fragmentation) + NEEDS P3-B->P2-E (render "What we noticed" card; honest-empty on low_confidence). `./gradlew build` GREEN. Live JDBC path (CAGG/raw reads) = Docker-deferred integrationTest, same dev-box limit as P2-A.10. commit 155ae1b
 2026-06-29  P3-B     test   authored PatternEngineIT (src/integrationTest, mirrors E2EIngestQueryIT): register -> seed 21-day deep_work stream w/ a Tue-10:00 spike -> refresh_continuous_aggregate (the CAGG gotcha: views are WITH NO DATA, engine reads them) -> GET /insights/patterns?range=8w asserts peak_window at iso_dow=2/hour=10, and ?range=7d asserts the gate (low_confidence + empty). Exercises the real SQL the pure-fn test can't (CAGG cols, isodow/hour extract, §3.2 fragmentation read). `./gradlew compileIntegrationTestJava` GREEN; run deferred to a Docker host (same limit as P2-A.10/P2-D). commit aadef1f
+2026-06-29  P3-C     note   START P3-C (NL query). Built on the P3-A contract (V3 insights/digests + cadence_readonly role). SECURITY = the point: text-to-SQL executes ONLY via cadence_readonly (SELECT-only, non-owner, RLS-enforced, org-scoped) behind a fail-closed allowlist; LLM generates SQL + caption, never sees raw rows. Owned pkg com.cadence.insights.nlquery (disjoint from P3-A's com.cadence.insights.*). The 5 P3-C dev commits were rebuilt as a single feature commit on top of master after master advanced past the session's 19a05fe snapshot (P3-A + P3-B landed); merge-base was b9c89b1 so the P3-A contract was already shared. Operator-approved JSqlParser + admin-only decisions recorded in Coordination.
+2026-06-29  P3-C.1  done   safe text-to-SQL security design: threat model (LLM SQL = hostile), 6 defense layers (SELECT-only role + non-owner RLS + statement_timeout/row-cap = DB-hard; single-SELECT + table/column allowlist + token denylist = fail-closed app policy), privacy-level-aware allowlist (excludes password_hash/email/title/url/token-hash tables; aggregate_only drops member_id + per-member tables), separate cadence_readonly datasource (never owner-connection fallback), LLM sees schema metadata in / capped result out, admin-only. doc backend/insights/nlquery/docs/P3-C.1-safe-text-to-sql.md; commit <pending>
+2026-06-29  P3-C.2  done   safe text-to-SQL core (com.cadence.insights.nlquery): SqlAllowlist (privacy-aware tables/columns) + SqlValidator (JSqlParser 4.9 fail-closed: denylist pre-filter -> parse -> single flat PlainSelect, reject DML/DDL/CTE/UNION/subquery/SELECT*/INTO/system-catalog -> every table+column on allowlist or output alias) + NlSqlPlanner (schema-metadata->SQL via structured model output + caption from capped rows; owns its own client, no P2-F bean collision) + NlQueryProperties. Build dep jsqlparser:4.9. SqlValidatorTest (38 cases) + ReadonlyRoleDefinitionTest GREEN; `./gradlew build` GREEN. commit <pending>
+2026-06-29  P3-C.3  done   POST /api/v1/query/nl (NlQueryController/Service/Executor/Config/Dtos): admin-only -> privacy lookup -> allowlist -> generate -> validate -> execute as cadence_readonly (PRIVATE Hikari DS owned by executor, NOT a Spring DataSource bean to keep primary autoconfig; read-only txn + SET LOCAL statement_timeout + set_config app.current_org RLS bind + SELECT * FROM(...) LIMIT max+1 cap) -> caption. Whole stack @ConditionalOnProperty(cadence.nlquery.enabled=false default). application.yml cadence.nlquery.*. Authored NlQueryReadonlyRoleIT (Docker-gated: cross-org SELECT=0 rows, write denied, cap truncates). doc backend/insights/nlquery/docs/P3-C-backend-verification.md; `./gradlew build` + compileIntegrationTestJava GREEN. commit <pending>
+2026-06-29  P3-C.4  done   query UI: self-contained Next 14 app /web/insights (mirrors web/admin BFF httpOnly-cookie session). /ask: question box + example-prompt chips + ResultView (model caption, hand-rolled SVG bar chart for 2-col label->number results, table, capped banner, view-SQL); /login (admin-only). BFF: browser -> same-origin /api/query/nl -> proxyJson -> backend POST /api/v1/query/nl w/ Bearer server-side; tokens never reach JS. All enforcement server-side; UI is a thin client. `npm install && npm run lint && npm run build` GREEN (6 routes + middleware). doc web/insights/docs/P3-C.4-query-ui.md. commit <pending>
+2026-06-29  P3-C     note   STREAM COMPLETE: backend (com.cadence.insights.nlquery) + UI (/web/insights), P3-C.1-.4 [x]; `./gradlew build` + web build GREEN; SqlValidatorTest(38)+ReadonlyRoleDefinitionTest green. Live e2e = the cadence_readonly fresh-volume deploy HANDOFF (authored NlQueryReadonlyRoleIT runs there); no owner-connection fallback ever. PHASE-3 P3-C Variables block filled; nlquery env owed to ENV-VARIABLES.md at phase close.
 ```

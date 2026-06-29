@@ -111,9 +111,21 @@ CADENCE_PATTERN_MIN_DAYS=14         # min history before showing patterns
 
 ### Variables to set
 ```
+# Phase-doc originals:
 CADENCE_NLQUERY_MODEL=claude-sonnet-4-6
 CADENCE_NLQUERY_DB_ROLE=cadence_readonly   # role with SELECT-only, RLS enforced
 CADENCE_NLQUERY_MAX_ROWS=5000
+# As-built additions (P3-C; fold into ENV-VARIABLES.md at phase close):
+CADENCE_NLQUERY_ENABLED=false              # whole stack off unless API key + readonly DS present
+CADENCE_NLQUERY_DB_URL=                     # readonly datasource JDBC url; defaults to DATABASE_URL
+CADENCE_NLQUERY_DB_PASSWORD=cadence_readonly# cadence_readonly password (deploy/initdb default)
+CADENCE_NLQUERY_TIMEOUT_MS=5000            # per-query statement_timeout (runaway guard)
+CADENCE_NLQUERY_MAX_OUTPUT_TOKENS=1024     # model SQL+caption budget
+ANTHROPIC_API_KEY=                          # shared with P2-F / P3-A
+# Web UI (/web/insights — runtime, server-side; NOT NEXT_PUBLIC):
+CADENCE_API_BASE=http://localhost:8080
+# CADENCE_INSIGHTS_COOKIE=cadence_insights_session
+# CADENCE_COOKIE_SECURE=false               # "true" only behind HTTPS
 ```
 
 ---

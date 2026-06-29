@@ -67,6 +67,18 @@ cadence:
     max-attempts: ${CADENCE_CATEGORIZE_MAX_ATTEMPTS:5}
     max-output-tokens: ${CADENCE_CATEGORIZE_MAX_OUTPUT_TOKENS:256}
     cache-ttl-days: ${CADENCE_CATEGORIZE_CACHE_TTL_DAYS:30}
+  nlquery:                             # P3-C natural-language query (text-to-SQL)
+    enabled: ${CADENCE_NLQUERY_ENABLED:false}   # off unless ANTHROPIC_API_KEY + readonly DS present
+    model: ${CADENCE_NLQUERY_MODEL:claude-sonnet-4-6}
+    max-rows: ${CADENCE_NLQUERY_MAX_ROWS:5000}          # result-row cap (LIMIT max+1)
+    statement-timeout-ms: ${CADENCE_NLQUERY_TIMEOUT_MS:5000}   # per-query runaway guard
+    max-output-tokens: ${CADENCE_NLQUERY_MAX_OUTPUT_TOKENS:1024}
+    # The SELECT-only, non-owner, RLS-enforced datasource (CADENCE_NLQUERY_DB_ROLE
+    # = cadence_readonly). A SEPARATE datasource from the owner connection — the
+    # text-to-SQL path NEVER rides the owner/app datasource (kickoff hard rule).
+    db-url: ${CADENCE_NLQUERY_DB_URL:${DATABASE_URL:jdbc:postgresql://localhost:5432/cadence}}
+    db-role: ${CADENCE_NLQUERY_DB_ROLE:cadence_readonly}
+    db-password: ${CADENCE_NLQUERY_DB_PASSWORD:cadence_readonly}
   pattern:                             # P3-B pattern engine (confidence-gated findings)
     min-days: ${CADENCE_PATTERN_MIN_DAYS:14}       # history floor; < this ⇒ no findings
     peak-concentration: ${CADENCE_PATTERN_PEAK_CONCENTRATION:1.5}  # peak hour ≥ N× avg active hour

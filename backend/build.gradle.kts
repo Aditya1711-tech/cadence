@@ -35,6 +35,12 @@ dependencies {
     implementation("org.springframework.boot:spring-boot-starter-data-redis")
     implementation("com.anthropic:anthropic-java:2.34.0")
 
+    // P3-C (NL query): structural SQL validation. JSqlParser parses the
+    // LLM-generated SQL so the allowlist is enforced on the statement tree
+    // (tables + columns), not by regex — the security gate must be able to prove
+    // a query touches only allowlisted relations. Pure-Java, no service.
+    implementation("com.github.jsqlparser:jsqlparser:4.9")
+
     // Self-issued JWT (HS256). jjwt — pure-Java, no extra service (§3 self-issued).
     implementation("io.jsonwebtoken:jjwt-api:0.12.6")
     runtimeOnly("io.jsonwebtoken:jjwt-impl:0.12.6")

@@ -98,7 +98,10 @@ Legend — **Where:** `agent` (local daemon), `backend` (Spring on box),
 | `CADENCE_DIGEST_MAX_OUTPUT_TOKENS` | backend | `1024` | Narration output cap. |
 | `CADENCE_FRAGMENTATION_SATURATION` | backend | `4.0` | Project switches/focus-hour ⇒ fragmentation_index 100 (P3-A.1 §3.3). |
 | _(digest delivery)_ | backend | — | **Reuses `SMTP_*` + `SMTP_FROM`** (no provider API). The phase-doc `EMAIL_FROM`/`EMAIL_PROVIDER_API_KEY` are superseded by the as-built SMTP model; empty `SMTP_HOST` → digest is logged to console (testable, no mail server). |
-| `CADENCE_PATTERN_MIN_DAYS` | backend | `14` | Min history for patterns. |
+| `CADENCE_PATTERN_MIN_DAYS` | backend | `14` | Min active days before patterns surface; below ⇒ no findings. |
+| `CADENCE_PATTERN_PEAK_CONCENTRATION` | backend | `1.5` | Peak hour ≥ N× avg active hour to surface. |
+| `CADENCE_PATTERN_MIN_CORRELATION` | backend | `0.4` | \|Pearson r\| floor for meeting→output & context-switch. |
+| `CADENCE_PATTERN_MIN_EFFECT` | backend | `0.15` | Min output delta on the high/low median split. |
 | `CADENCE_NLQUERY_MODEL` | backend | `claude-sonnet-4-6` | |
 | `CADENCE_NLQUERY_DB_ROLE` | backend | `cadence_readonly` | SELECT-only, RLS on. |
 | `CADENCE_NLQUERY_MAX_ROWS` | backend | `5000` | |

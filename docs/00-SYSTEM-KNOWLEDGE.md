@@ -205,6 +205,9 @@ Base path: `/api/v1`. JSON only. Auth via `Authorization: Bearer <jwt>`.
   `card_svg` populate once the weekly digest job (P3-A.5) runs (null/empty until
   then). The `org` section is present only for admins and is privacy-bounded.
   `?week=YYYY-Www` selects a week (default = most recent completed ISO week).
+  `POST /api/v1/insights/run?week=` is an **admin-only, dogfood-only** trigger
+  that runs the digest pipeline for the caller's org now (only registered when
+  `CADENCE_DIGEST_ENABLED=true`); the production path is the weekly cron (P3-A.5).
 - **Known gap vs Phase-2 exit criteria:** there is **no endpoint to SET**
   `orgs.privacy_level`. It is created at the server default and is only
   *readable* (`AuthResponse.org.privacy_level`); a setter

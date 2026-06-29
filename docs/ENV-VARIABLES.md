@@ -91,10 +91,13 @@ Legend — **Where:** `agent` (local daemon), `backend` (Spring on box),
 
 | Variable | Where | Example | Notes |
 |---|---|---|---|
+| `CADENCE_DIGEST_ENABLED` | backend | `false` | P3-A.5 gate. Off → digest job/narrator/trigger absent; rest of backend boots. `true` with no `ANTHROPIC_API_KEY` still works (template narrator). |
 | `CADENCE_DIGEST_MODEL` | backend | `claude-sonnet-4-6` | Narrative quality matters. |
-| `CADENCE_DIGEST_CRON` | backend | `0 0 23 * * SUN` | Weekly. |
-| `EMAIL_FROM` | backend | `insights@<domain>` | |
-| `EMAIL_PROVIDER_API_KEY` | backend | | SES or other. |
+| `CADENCE_DIGEST_CRON` | backend | `0 0 23 * * SUN` | Weekly (Sun 23:00). |
+| `CADENCE_DIGEST_MIN_DAYS` | backend | `14` | Min history before a member gets a digest. |
+| `CADENCE_DIGEST_MAX_OUTPUT_TOKENS` | backend | `1024` | Narration output cap. |
+| `CADENCE_FRAGMENTATION_SATURATION` | backend | `4.0` | Project switches/focus-hour ⇒ fragmentation_index 100 (P3-A.1 §3.3). |
+| _(digest delivery)_ | backend | — | **Reuses `SMTP_*` + `SMTP_FROM`** (no provider API). The phase-doc `EMAIL_FROM`/`EMAIL_PROVIDER_API_KEY` are superseded by the as-built SMTP model; empty `SMTP_HOST` → digest is logged to console (testable, no mail server). |
 | `CADENCE_PATTERN_MIN_DAYS` | backend | `14` | Min history for patterns. |
 | `CADENCE_NLQUERY_MODEL` | backend | `claude-sonnet-4-6` | |
 | `CADENCE_NLQUERY_DB_ROLE` | backend | `cadence_readonly` | SELECT-only, RLS on. |

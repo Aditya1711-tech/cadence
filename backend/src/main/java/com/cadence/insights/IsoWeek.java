@@ -15,10 +15,10 @@ import java.time.temporal.TemporalAdjusters;
  * e.g. {@code "2026-W26"}. The digest window is [Monday 00:00 UTC, next Monday
  * 00:00 UTC). Pure date math — no DB, fully unit-testable.
  */
-record IsoWeek(int weekYear, int week) {
+public record IsoWeek(int weekYear, int week) {
 
     /** Parses {@code "2026-W26"} (zero-padded or not). */
-    static IsoWeek parse(String s) {
+    public static IsoWeek parse(String s) {
         if (s == null || s.isBlank()) {
             throw ApiException.badRequest("Empty week. Use the ISO form, e.g. 2026-W26.");
         }
@@ -35,13 +35,13 @@ record IsoWeek(int weekYear, int week) {
     }
 
     /** The most recent fully-completed ISO week relative to {@code now} (the week before this one). */
-    static IsoWeek mostRecentCompleted(OffsetDateTime now) {
+    public static IsoWeek mostRecentCompleted(OffsetDateTime now) {
         return of(now.toLocalDate().with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY))
                 .minusWeeks(1));
     }
 
     /** The ISO week containing {@code now} (used by the Sunday-night digest job, P3-A.5). */
-    static IsoWeek current(OffsetDateTime now) {
+    public static IsoWeek current(OffsetDateTime now) {
         return of(now.toLocalDate());
     }
 
@@ -52,7 +52,7 @@ record IsoWeek(int weekYear, int week) {
     }
 
     /** Monday of this week, 00:00 UTC. Jan 4 is always in ISO week 1. */
-    OffsetDateTime start() {
+    public OffsetDateTime start() {
         LocalDate week1Monday = LocalDate.of(weekYear, 1, 4)
                 .with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY));
         LocalDate monday = week1Monday.plusWeeks(week - 1L);
@@ -60,12 +60,12 @@ record IsoWeek(int weekYear, int week) {
     }
 
     /** Exclusive end: the following Monday, 00:00 UTC. */
-    OffsetDateTime end() {
+    public OffsetDateTime end() {
         return start().plusWeeks(1);
     }
 
     /** Number of completed weeks of history for an entity whose first event is at {@code firstEvent}. */
-    int historyWeeksSince(OffsetDateTime firstEvent) {
+    public int historyWeeksSince(OffsetDateTime firstEvent) {
         if (firstEvent == null) return 0;
         LocalDate firstMonday = firstEvent.atZoneSameInstant(ZoneOffset.UTC).toLocalDate()
                 .with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY));
@@ -73,7 +73,7 @@ record IsoWeek(int weekYear, int week) {
         return (int) Math.max(0, weeks);
     }
 
-    String label() {
+    public String label() {
         return "%d-W%02d".formatted(weekYear, week);
     }
 }

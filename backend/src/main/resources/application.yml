@@ -47,6 +47,12 @@ cadence:
     public-base-url: ${APP_PUBLIC_BASE_URL:http://localhost:3000}
   insights:                            # P3-A digest / aggregated facts
     fragmentation-saturation: ${CADENCE_FRAGMENTATION_SATURATION:4.0}  # switches/focus-h ⇒ index 100
+  digest:                              # P3-A.5 weekly digest job
+    enabled: ${CADENCE_DIGEST_ENABLED:false}     # off unless ANTHROPIC_API_KEY present (template fallback otherwise)
+    model: ${CADENCE_DIGEST_MODEL:claude-sonnet-4-6}
+    cron: ${CADENCE_DIGEST_CRON:0 0 23 * * SUN}  # Sunday 23:00
+    min-days: ${CADENCE_DIGEST_MIN_DAYS:14}      # min history before a member gets a digest
+    max-output-tokens: ${CADENCE_DIGEST_MAX_OUTPUT_TOKENS:1024}
   github:                                    # P2-D — GitHub integration
     app-id: ${GITHUB_APP_ID:}
     private-key: ${GITHUB_APP_PRIVATE_KEY:}  # PEM, base64; full_diff only

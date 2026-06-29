@@ -54,11 +54,16 @@ independent and can start anytime.
 
 ### Variables to set
 ```
-ANTHROPIC_API_KEY=                  # shared with P2-F
+ANTHROPIC_API_KEY=                  # shared with P2-F; absent → template narrator
+CADENCE_DIGEST_ENABLED=false        # gate (P3-A.5); job/narrator/trigger only when true
 CADENCE_DIGEST_MODEL=claude-sonnet-4-6
 CADENCE_DIGEST_CRON=0 0 23 * * SUN  # Sunday 11pm
-EMAIL_FROM=insights@<yourdomain>
-EMAIL_PROVIDER_API_KEY=             # e.g. SES creds or other
+CADENCE_DIGEST_MIN_DAYS=14          # min history before a member gets a digest
+CADENCE_DIGEST_MAX_OUTPUT_TOKENS=1024
+CADENCE_FRAGMENTATION_SATURATION=4.0
+# DELIVERY (as-built): SMTP only — reuse SMTP_HOST/PORT/USERNAME/PASSWORD + SMTP_FROM.
+# No AWS, no provider API. Empty SMTP_HOST → digest logged to console (testable).
+# (Supersedes the original EMAIL_FROM / EMAIL_PROVIDER_API_KEY in this block.)
 ```
 
 ---
